@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ffi';
 import 'package:ffi/ffi.dart' show malloc;
+import 'package:hidapi_dart/hid.dart';
 import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
@@ -127,109 +128,52 @@ class SerialApi {
 
 class _SerialProtocol {
   int errorCount = 0;
-  final _txBytes = malloc<Uint8>(SerialParse.usbHidBytes);
-  final _rxBytes = malloc<Uint8>(SerialParse.usbHidBytes);
-  final _rxTemp = Uint8List(SerialParse.usbHidBytes);
-  final _dummy = malloc<Int32>(1);
-  final libusb = Libusb(loadLibrary());
-  Pointer<libusb_device_handle>? devHandle;
+  final _txBytes = Uint8List(SerialParse.usbHidBytes + 1);
+  final _rxBytes = Uint8List(SerialParse.usbHidBytes);
+  var _hid = HID();
 
   _SerialProtocol() {
     SerialParse.crc16Generate();
     SerialParse.crc32Generate();
     // initialize TX bytes
-    _txBytes[SerialParse.commandModeIndex] = 0;
-    _txBytes[SerialParse.timestampIndex] = 0;
-
-    if (libusb.libusb_init(nullptr) < 0) {
-      throw Exception("failed to load library");
-    }
-  }
-
-  void destructor() {
-    malloc.free(_txBytes);
+    _txBytes[SerialParse.commandModeIndex + 1] = 0;
+    _txBytes[SerialParse.timestampIndex + 1] = 0;
   }
 
   Future<bool> connect() async {
-    devHandle = libusb.libusb_open_device_with_vid_pid(
-        nullptr, SerialParse.vendorId, SerialParse.productId);
-
-    if(devHandle != null) {
-      libusb.libusb_detach_kernel_driver(devHandle!, 0);
-      final result = libusb.libusb_claim_interface(devHandle!, 0);
-      print("result: $result");
-    }
-
-    return (devHandle != nullptr);
+    String? serial;
+    _hid = HID(idVendor: SerialParse.vendorId, idProduct: SerialParse.productId, serial: serial);
+    return (_hid.open() >= 0);
   }
 
   void closePort() {
-    if (devHandle != null) {
-      libusb.libusb_close(devHandle!);
-      libusb.libusb_exit(nullptr);
-    }
+    _hid.close();
   }
 
-  int _txProtocol() {
+  Future<int> _txProtocol() async {
     int bytesSent = 0;
-    _txBytes[SerialParse.timestampIndex]++;
-    // write bytes to the serial tx buffer
-    if (devHandle != null) {
-      bytesSent = libusb.libusb_control_transfer(
-          devHandle!,
-          SerialParse.ctrlOut,
-          SerialParse.hidSetReport,
-          (SerialParse.hidReportTypeOutput << 8) | 0x00,
-          0,
-          _txBytes,
-          SerialParse.usbHidBytes,
-          1000);
-
-      // bytesSent = libusb.libusb_interrupt_transfer(
-      //     devHandle!,
-      //     0x00,
-      //     _txBytes,
-      //     SerialParse.usbHidBytes,
-      //     _dummy,
-      //     1000);
-    }
+    _txBytes[SerialParse.timestampIndex + 1]++;
+    await _hid.write(_txBytes).then((value) {
+      bytesSent = value;
+    });
     return bytesSent;
   }
 
-  bool _rxProtocol() {
-    int result = -1;
-    if(devHandle != null) {
-      result = libusb.libusb_control_transfer(
-          devHandle!,
-          SerialParse.ctrlIn,
-          SerialParse.hidGetReport,
-          (SerialParse.hidReportTypeInput << 8) | 0x00,
-          0,
-          _rxBytes,
-          SerialParse.usbHidBytes,
-          1000);
-
-      // result = libusb.libusb_interrupt_transfer(
-      //     devHandle!,
-      //     0x80,
-      //     _rxBytes,
-      //     SerialParse.usbHidBytes,
-      //     _dummy,
-      //     5000);
-      // print("result: $result transferred: ${_dummy[0]}");
-
-
-      for(int i = 0; i < 64; i++) {
-        _rxTemp[i] = _rxBytes[i];
+  Future<bool> _rxProtocol() async {
+    bool success = false;
+    final hidRead = await _hid.read();
+    if(hidRead != null) {
+      for(int i = 0; i < hidRead.length; i++) {
+        _rxBytes[i] = hidRead[i];
       }
-      print("rx: ${_rxTemp.toString()}");
+      success = true;
     }
-    return (result >= 0);
+    return success;
   }
 
   void loadTxData(List<int> data) {
     for (int i = 0; i < SerialParse.usbHidBytes; i++) {
-      _txBytes[i] = data[i];
+      _txBytes[i + 1] = data[i];
     }
   }
 }
@@ -296,25 +240,18 @@ Future<void> _commIsolate(SendPort sendPort) async {
   }
 
   while (configData[SerialKeys.running] == true) {
-    final bytesSent = serial._txProtocol();
+    final bytesSent = await serial._txProtocol();
     if(bytesSent >= 0) {
-      if (serial._rxProtocol()) {
-        final rxBytes = Uint8List(SerialParse.usbHidBytes);
-        for(int i = 0; i < SerialParse.usbHidBytes; i++) {
-          rxBytes[i] = serial._rxBytes[i];
-        }
-
-        sendPort.send(rxBytes);
+      if (await serial._rxProtocol()) {
+        sendPort.send(serial._rxBytes);
         if (configData[SerialKeys.recordState] == RecordState.inProgress) {
-          writer?.write(rxBytes.toString() + newline);
+          writer?.write(serial._rxBytes.toString() + newline);
         }
       }
     }
     // yield to the listener
     await Future.delayed(Duration.zero);
   }
-  // free memory
-  serial.destructor();
 }
 
 DynamicLibrary loadLibrary() {
