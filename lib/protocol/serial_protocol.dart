@@ -1,12 +1,10 @@
 import 'dart:async';
 import 'dart:ffi';
-import 'package:ffi/ffi.dart' show malloc;
 import 'package:hidapi_dart/hid.dart';
 import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 import 'package:usb_host/misc/file_utilities.dart';
-import 'package:libusb/libusb32.dart';
 import 'serial_parse.dart';
 
 enum SerialKeys {
@@ -22,6 +20,7 @@ const _initConfigData = {
 };
 
 class SerialApi {
+  final applicationPath = Directory.current;
   final txBytes = Uint8List(SerialParse.usbHidBytes);
   final _rxBytes = Uint8List(SerialParse.usbHidBytes);
   int _checksumErrors = 0;
@@ -82,6 +81,8 @@ class SerialApi {
   }
 
   Future<void> connect() async {
+    // set the current directory so the DLL is loaded correctly
+    Directory.current = applicationPath;
     await Isolate.spawn(_commIsolate, _receivePort.sendPort);
     _sendPortCompleter = Completer<SendPort>();
     _sendPort = await _sendPortCompleter.future;
