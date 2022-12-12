@@ -321,6 +321,46 @@ class HostDataModel extends ChangeNotifier {
     return success;
   }
 
+  Future<bool> initBootloader() async {
+    _userMessage = null;
+    bool success = false, nullComplete = false;
+    if (serial.isRunning) {
+      _haltTelemetry = true;
+      SerialParse.setCommandMode(serial, SerialParse.nullMode);
+      serial.sendPacket();
+      serial.startWatchdog(parameterTimeout);
+
+      while (!serial.watchdogTripped) {
+        if (SerialParse.getCommandMode(serial) == SerialParse.nullMode) {
+          nullComplete = true;
+          break;
+        }
+        await Future.delayed(const Duration(milliseconds: 1));
+      }
+
+      if (nullComplete) {
+        SerialParse.setCommandMode(serial, SerialParse.reprogramBootMode);
+        serial.sendPacket();
+        serial.startWatchdog(parameterTimeout);
+
+        while (!serial.watchdogTripped) {
+          if (SerialParse.getCommandMode(serial) ==
+              SerialParse.reprogramBootMode) {
+            _userMessage = Message.info.bootloader;
+            success = true;
+            break;
+          }
+          await Future.delayed(const Duration(milliseconds: 1));
+        }
+      }
+
+      if (!nullComplete || !success) {
+        _userMessage = Message.error.bootloader;
+      }
+    }
+    return success;
+  }
+
   void updateDisplaySelection() {
     for (int i = 0; i < configData.telemetry.length; i++) {
       plotData.curves[i].displayed = configData.telemetry[i].displayed;

@@ -254,18 +254,3 @@ Future<void> _commIsolate(SendPort sendPort) async {
     await Future.delayed(Duration.zero);
   }
 }
-
-DynamicLibrary loadLibrary() {
-  if (Platform.isWindows) {
-    return DynamicLibrary.open(
-        '${Directory.current.path}\\libusb\\libusb-1.0.dll');
-  }
-  if (Platform.isMacOS) {
-    return DynamicLibrary.open(
-        '${Directory.current.path}/libusb/libusb-1.0.dylib');
-  } else if (Platform.isLinux) {
-    return DynamicLibrary.open(
-        '${Directory.current.path}/libusb/libusb-1.0.so');
-  }
-  throw 'libusb dynamic library not found';
-}

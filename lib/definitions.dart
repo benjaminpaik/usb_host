@@ -28,6 +28,7 @@ class _InfoMessage {
   final parameterGet = "parameter retrieval successful";
   final parameterWrite = "parameter send successful";
   final parameterFlash = "parameter flash successful";
+  final bootloader = "bootloader initiated; disconnecting usb";
 }
 
 class _ErrorMessage {
@@ -41,6 +42,7 @@ class _ErrorMessage {
     final mismatchStringFormatted = mismatchString.substring(1, mismatchString.length - 1);
     return "parameter(s) not updated: $mismatchStringFormatted";
   }
+  final bootloader = "could not initiate bootloader";
 }
 
 class Message {
