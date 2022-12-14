@@ -82,7 +82,7 @@ class MenuBar extends StatelessWidget {
     );
 
     final dataFileMenuText = Selector<HostDataModel, bool>(
-      selector: (_, selectorModel) => selectorModel.serial.isRunning,
+      selector: (_, selectorModel) => selectorModel.usb.isRunning,
       builder: (context, running, child) {
         return Text(
           "create data file",
@@ -116,7 +116,7 @@ class MenuBar extends StatelessWidget {
       PopupMenuItem(
           child: dataFileMenuText,
           onTap: () {
-            if (hostDataModel.serial.isRunning) {
+            if (hostDataModel.usb.isRunning) {
               hostDataModel.createDataFile();
             }
           }),
@@ -158,7 +158,7 @@ class MenuBar extends StatelessWidget {
       PopupMenuItem(child: const Text("program target"), onTap: () {
         hostDataModel.initBootloader().then((_) {
           displayMessage(context, hostDataModel.userMessage);
-          hostDataModel.serial.connect();
+          hostDataModel.usb.connect();
         });
       }),
     ];
@@ -182,7 +182,7 @@ class MenuBar extends StatelessWidget {
     final recordButton = Padding(
       padding: const EdgeInsets.all(8.0),
       child: Selector<HostDataModel, RecordState>(
-        selector: (_, selectorModel) => selectorModel.serial.recordState,
+        selector: (_, selectorModel) => selectorModel.usb.recordState,
         builder: (context, recordState, child) {
           return IconButton(
               onPressed: () {
@@ -201,13 +201,13 @@ class MenuBar extends StatelessWidget {
         width: 110.0,
         child: ElevatedButton(
           child: Selector<HostDataModel, bool>(
-            selector: (_, selectorModel) => selectorModel.serial.isRunning,
+            selector: (_, selectorModel) => selectorModel.usb.isRunning,
             builder: (context, isRunning, child) {
               return Text(isRunning ? "Disconnect" : "Connect");
             },
           ),
           onPressed: () {
-            hostDataModel.serialConnect().then((success) {
+            hostDataModel.usbConnect().then((success) {
               if (success) {
                 parameterTableModel.updateTable();
               }

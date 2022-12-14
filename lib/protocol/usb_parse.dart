@@ -1,28 +1,9 @@
 import 'dart:typed_data';
-import 'package:libusb/libusb32.dart';
-import 'package:usb_host/protocol/serial_protocol.dart';
+import 'package:usb_host/protocol/usb_protocol.dart';
 
-class SerialParse {
+class UsbParse {
   static const vendorId = 1155;
   static const productId = 22352;
-
-  static const ctrlIn = libusb_endpoint_direction.LIBUSB_ENDPOINT_IN |
-      libusb_request_type.LIBUSB_REQUEST_TYPE_CLASS |
-      libusb_request_recipient.LIBUSB_RECIPIENT_INTERFACE;
-  static const ctrlOut = libusb_endpoint_direction.LIBUSB_ENDPOINT_OUT |
-      libusb_request_type.LIBUSB_REQUEST_TYPE_CLASS |
-      libusb_request_recipient.LIBUSB_RECIPIENT_INTERFACE;
-
-  static const hidGetReport = 0x01;
-  static const hidGetIdle = 0x02;
-  static const hidGetProtocol = 0x03;
-  static const hidSetReport = 0x09;
-  static const hidSetIdle = 0x0A;
-  static const hidSetProtocol = 0x0B;
-
-  static const hidReportTypeInput = 0x01;
-  static const hidReportTypeOutput = 0x02;
-  static const hidReportTypeFeature = 0x03;
 
   static const commandValueIndex = 0;
   static const parameterTableIndex = 0;
@@ -58,47 +39,47 @@ class SerialParse {
   static const timestampRollover = 256;
   static const timestampHostThreshold = 200;
 
-  static void setCommandMode(SerialApi serial, int mode) {
-    serial.txBytes[commandModeIndex] = mode;
+  static void setCommandMode(UsbApi usb, int mode) {
+    usb.txBytes[commandModeIndex] = mode;
   }
 
-  static int getCommandMode(SerialApi serial) {
-    return serial.rxBytes[commandModeIndex];
+  static int getCommandMode(UsbApi usb) {
+    return usb.rxBytes[commandModeIndex];
   }
 
-  static void setData16(SerialApi serial, int value, int index) {
+  static void setData16(UsbApi usb, int value, int index) {
     // starting index
     int offset = (2 * index) + dataStartIndex;
     // byte conversion
-    serial.txBytes[offset] = (value >> 8) & 0xFF;
-    serial.txBytes[offset + 1] = value & 0xFF;
+    usb.txBytes[offset] = (value >> 8) & 0xFF;
+    usb.txBytes[offset + 1] = value & 0xFF;
   }
 
-  static int getData16(SerialApi serial, int index) {
+  static int getData16(UsbApi usb, int index) {
     final byteData = ByteData(2);
     int offset = (2 * index) + dataStartIndex;
-    byteData.setUint8(1, serial.rxBytes[offset + 1]);
-    byteData.setUint8(0, serial.rxBytes[offset + 0]);
+    byteData.setUint8(1, usb.rxBytes[offset + 1]);
+    byteData.setUint8(0, usb.rxBytes[offset + 0]);
     return byteData.getInt32(0);
   }
 
-  static void setData32(SerialApi serial, int value, int index) {
+  static void setData32(UsbApi usb, int value, int index) {
     // starting index
     int offset = (4 * index) + dataStartIndex;
     // byte conversion
-    serial.txBytes[offset] = (value >> 24) & 0xFF;
-    serial.txBytes[offset + 1] = (value >> 16) & 0xFF;
-    serial.txBytes[offset + 2] = (value >> 8) & 0xFF;
-    serial.txBytes[offset + 3] = value & 0xFF;
+    usb.txBytes[offset] = (value >> 24) & 0xFF;
+    usb.txBytes[offset + 1] = (value >> 16) & 0xFF;
+    usb.txBytes[offset + 2] = (value >> 8) & 0xFF;
+    usb.txBytes[offset + 3] = value & 0xFF;
   }
 
-  static int getData32(SerialApi serial, int index) {
+  static int getData32(UsbApi usb, int index) {
     final byteData = ByteData(4);
     int offset = (4 * index) + dataStartIndex;
-    byteData.setUint8(3, serial.rxBytes[offset + 3]);
-    byteData.setUint8(2, serial.rxBytes[offset + 2]);
-    byteData.setUint8(1, serial.rxBytes[offset + 1]);
-    byteData.setUint8(0, serial.rxBytes[offset + 0]);
+    byteData.setUint8(3, usb.rxBytes[offset + 3]);
+    byteData.setUint8(2, usb.rxBytes[offset + 2]);
+    byteData.setUint8(1, usb.rxBytes[offset + 1]);
+    byteData.setUint8(0, usb.rxBytes[offset + 0]);
     return byteData.getInt32(0);
   }
 

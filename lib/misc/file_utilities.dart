@@ -6,7 +6,7 @@ import 'dart:typed_data';
 import 'package:usb_host/misc/config_data.dart';
 import 'package:usb_host/misc/parameter.dart';
 import 'package:usb_host/misc/telemetry.dart';
-import 'package:usb_host/protocol/serial_parse.dart';
+import 'package:usb_host/protocol/usb_parse.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
@@ -370,10 +370,10 @@ Future<Object> convertDataFile(
       : rawDataFileName.substring(fileNameIndex + 1);
 
   final writer = File("$dataFileName.csv").openWrite();
-  writer.write(parseDataHeaders(configData, SerialParse.stateRequest));
+  writer.write(parseDataHeaders(configData, UsbParse.stateRequest));
   await writer.flush();
   writer.writeAll(
-      DataRowIterable(configData, SerialParse.stateRequest, true, dataLines));
+      DataRowIterable(configData, UsbParse.stateRequest, true, dataLines));
   await writer.close();
   if (!saveByteFile) {
     await rawDataFile.delete();
@@ -420,7 +420,7 @@ class DataRowIterator implements Iterator<String> {
       if (rawDataRow.isNotEmpty) {
         rawDataRow = rawDataRow.substring(1, rawDataRow.length - 1);
         final bytes = rawDataRow.split(',').map((e) => int.parse(e)).toList();
-        final timeCurrent = bytes[SerialParse.timestampIndex];
+        final timeCurrent = bytes[UsbParse.timestampIndex];
         final timeDiff = parseTimeDiff(configData, timeCurrent, _timePrevious);
         _timePrevious = timeCurrent;
         _timeStamp += timeDiff;
@@ -455,7 +455,7 @@ int parseTimeDiff(ConfigData configData, int timeCurrent, int timePrevious) {
   if (timeCurrent >= timePrevious) {
     timeDiff = timeCurrent - timePrevious;
   } else {
-    timeDiff = timeCurrent + (SerialParse.timestampRollover - timePrevious);
+    timeDiff = timeCurrent + (UsbParse.timestampRollover - timePrevious);
   }
   return timeDiff;
 }
@@ -470,7 +470,7 @@ String parseDataRow(ConfigData configData, int requestedStates,
 
   // convert a row of bytes into 32-bit integers
   for (int i = 0; i < configData.telemetry.length; i++) {
-    int startIndex = SerialParse.dataStartIndex + (4 * stateIndex);
+    int startIndex = UsbParse.dataStartIndex + (4 * stateIndex);
     // if the specific state is being requested
     if ((requestedStates & (1 << i)) != 0) {
       byteData.setUint8(0, bytes[startIndex]);
@@ -487,7 +487,7 @@ String parseDataRow(ConfigData configData, int requestedStates,
     }
   }
   // add the timestamp and command mode
-  rowText = "$timeStamp, ${bytes[SerialParse.commandModeIndex]}, ";
+  rowText = "$timeStamp, ${bytes[UsbParse.commandModeIndex]}, ";
 
   for (int i = 0; i < configData.telemetry.length; i++) {
     rowText += "${stateValues[i]}, ";

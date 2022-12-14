@@ -1,28 +1,27 @@
 import 'dart:async';
-import 'dart:ffi';
 import 'package:hidapi_dart/hid.dart';
 import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 import 'package:usb_host/misc/file_utilities.dart';
-import 'serial_parse.dart';
+import 'usb_parse.dart';
 
-enum SerialKeys {
+enum ProtocolKeys {
   running,
   dataFile,
   recordState,
 }
 
 const _initConfigData = {
-  SerialKeys.running: false,
-  SerialKeys.dataFile: "",
-  SerialKeys.recordState: RecordState.disabled,
+  ProtocolKeys.running: false,
+  ProtocolKeys.dataFile: "",
+  ProtocolKeys.recordState: RecordState.disabled,
 };
 
-class SerialApi {
+class UsbApi {
   final applicationPath = Directory.current;
-  final txBytes = Uint8List(SerialParse.usbHidBytes);
-  final _rxBytes = Uint8List(SerialParse.usbHidBytes);
+  final txBytes = Uint8List(UsbParse.usbHidBytes);
+  final _rxBytes = Uint8List(UsbParse.usbHidBytes);
   int _checksumErrors = 0;
   Completer<SendPort> _sendPortCompleter = Completer<SendPort>();
   SendPort? _sendPort;
@@ -32,34 +31,34 @@ class SerialApi {
   var _watchdogTripped = false;
   bool get watchdogTripped => _watchdogTripped;
 
-  SerialApi() : _receivePort = ReceivePort() {
-    SerialParse.crc16Generate();
-    SerialParse.crc32Generate();
+  UsbApi() : _receivePort = ReceivePort() {
+    UsbParse.crc16Generate();
+    UsbParse.crc32Generate();
     _receivePort.listen(receiveDataEvent);
-    txBytes[SerialParse.commandModeIndex] = 0;
-    txBytes[SerialParse.timestampIndex] = 0;
+    txBytes[UsbParse.commandModeIndex] = 0;
+    txBytes[UsbParse.timestampIndex] = 0;
   }
 
   set dataFile(String file) {
     if (_sendPort != null) {
-      _configData[SerialKeys.dataFile] = file;
-      _sendPort!.send({SerialKeys.dataFile: file});
+      _configData[ProtocolKeys.dataFile] = file;
+      _sendPort!.send({ProtocolKeys.dataFile: file});
     }
   }
 
   String get dataFile {
-    return _configData[SerialKeys.dataFile] as String;
+    return _configData[ProtocolKeys.dataFile] as String;
   }
 
   set recordState(RecordState state) {
     if (_sendPort != null) {
-      _configData[SerialKeys.recordState] = state;
-      _sendPort!.send({SerialKeys.recordState: state});
+      _configData[ProtocolKeys.recordState] = state;
+      _sendPort!.send({ProtocolKeys.recordState: state});
     }
   }
 
   RecordState get recordState {
-    return _configData[SerialKeys.recordState] as RecordState;
+    return _configData[ProtocolKeys.recordState] as RecordState;
   }
 
   void receiveDataEvent(dynamic data) {
@@ -68,7 +67,7 @@ class SerialApi {
         _rxBytes[i] = data[i];
       }
     } else if (data is Map) {
-      for (SerialKeys key in data.keys) {
+      for (ProtocolKeys key in data.keys) {
         if (_configData.containsKey(key)) {
           _configData[key] = data[key];
         }
@@ -88,7 +87,7 @@ class SerialApi {
     _sendPort = await _sendPortCompleter.future;
 
     if (_sendPort != null) {
-      _configData[SerialKeys.running] = true;
+      _configData[ProtocolKeys.running] = true;
       _sendPort!.send(_configData);
       sendPacket();
     }
@@ -96,7 +95,7 @@ class SerialApi {
 
   void closePort() {
     if (_sendPort != null) {
-      _configData[SerialKeys.running] = false;
+      _configData[ProtocolKeys.running] = false;
       _sendPort!.send(_configData);
     }
   }
@@ -123,27 +122,27 @@ class SerialApi {
   }
 
   bool get isRunning {
-    return _configData[SerialKeys.running] as bool;
+    return _configData[ProtocolKeys.running] as bool;
   }
 }
 
-class _SerialProtocol {
+class _UsbProtocol {
   int errorCount = 0;
-  final _txBytes = Uint8List(SerialParse.usbHidBytes + 1);
-  final _rxBytes = Uint8List(SerialParse.usbHidBytes);
+  final _txBytes = Uint8List(UsbParse.usbHidBytes + 1);
+  final _rxBytes = Uint8List(UsbParse.usbHidBytes);
   var _hid = HID();
 
-  _SerialProtocol() {
-    SerialParse.crc16Generate();
-    SerialParse.crc32Generate();
+  _UsbProtocol() {
+    UsbParse.crc16Generate();
+    UsbParse.crc32Generate();
     // initialize TX bytes
-    _txBytes[SerialParse.commandModeIndex + 1] = 0;
-    _txBytes[SerialParse.timestampIndex + 1] = 0;
+    _txBytes[UsbParse.commandModeIndex + 1] = 0;
+    _txBytes[UsbParse.timestampIndex + 1] = 0;
   }
 
   Future<bool> connect() async {
     String? serial;
-    _hid = HID(idVendor: SerialParse.vendorId, idProduct: SerialParse.productId, serial: serial);
+    _hid = HID(idVendor: UsbParse.vendorId, idProduct: UsbParse.productId, serial: serial);
     return (_hid.open() >= 0);
   }
 
@@ -153,7 +152,7 @@ class _SerialProtocol {
 
   Future<int> _txProtocol() async {
     int bytesSent = 0;
-    _txBytes[SerialParse.timestampIndex + 1]++;
+    _txBytes[UsbParse.timestampIndex + 1]++;
     await _hid.write(_txBytes).then((value) {
       bytesSent = value;
     });
@@ -173,7 +172,7 @@ class _SerialProtocol {
   }
 
   void loadTxData(List<int> data) {
-    for (int i = 0; i < SerialParse.usbHidBytes; i++) {
+    for (int i = 0; i < UsbParse.usbHidBytes; i++) {
       _txBytes[i + 1] = data[i];
     }
   }
@@ -181,7 +180,7 @@ class _SerialProtocol {
 
 Future<void> _commIsolate(SendPort sendPort) async {
   IOSink? writer;
-  _SerialProtocol serial = _SerialProtocol();
+  _UsbProtocol usb = _UsbProtocol();
   final configData = {..._initConfigData};
 
   final receivePort = ReceivePort();
@@ -191,21 +190,21 @@ Future<void> _commIsolate(SendPort sendPort) async {
     bool openClosePort = false;
     // TX bytes input
     if (data is List<int>) {
-      serial.loadTxData(data);
+      usb.loadTxData(data);
     } else if (data is Map) {
       // load all config data
-      for (SerialKeys key in data.keys) {
+      for (ProtocolKeys key in data.keys) {
         if (configData.containsKey(key)) {
           // special actions for received maps
           switch (key) {
 
-            case (SerialKeys.running):
+            case (ProtocolKeys.running):
               openClosePort = (configData[key] != data[key]);
               break;
 
-            case (SerialKeys.recordState):
+            case (ProtocolKeys.recordState):
               if (data[key] == RecordState.inProgress) {
-                final dataFile = configData[SerialKeys.dataFile] as String;
+                final dataFile = configData[ProtocolKeys.dataFile] as String;
                 if (dataFile.isNotEmpty) {
                   writer = File(dataFile).openWrite();
                 }
@@ -222,31 +221,31 @@ Future<void> _commIsolate(SendPort sendPort) async {
       }
       // open and close COM port based on running key
       if (openClosePort) {
-        if (configData[SerialKeys.running] == true) {
-          serial.connect().then((connected) {
-            configData[SerialKeys.running] = connected;
-            sendPort.send({SerialKeys.running: configData[SerialKeys.running]});
+        if (configData[ProtocolKeys.running] == true) {
+          usb.connect().then((connected) {
+            configData[ProtocolKeys.running] = connected;
+            sendPort.send({ProtocolKeys.running: configData[ProtocolKeys.running]});
           });
         } else {
-          serial.closePort();
+          usb.closePort();
           receivePort.close();
         }
       }
     }
   });
 
-  while (configData[SerialKeys.running] == false) {
+  while (configData[ProtocolKeys.running] == false) {
     // yield to the listener
     await Future.delayed(Duration.zero);
   }
 
-  while (configData[SerialKeys.running] == true) {
-    final bytesSent = await serial._txProtocol();
+  while (configData[ProtocolKeys.running] == true) {
+    final bytesSent = await usb._txProtocol();
     if(bytesSent >= 0) {
-      if (await serial._rxProtocol()) {
-        sendPort.send(serial._rxBytes);
-        if (configData[SerialKeys.recordState] == RecordState.inProgress) {
-          writer?.write(serial._rxBytes.toString() + newline);
+      if (await usb._rxProtocol()) {
+        sendPort.send(usb._rxBytes);
+        if (configData[ProtocolKeys.recordState] == RecordState.inProgress) {
+          writer?.write(usb._rxBytes.toString() + newline);
         }
       }
     }

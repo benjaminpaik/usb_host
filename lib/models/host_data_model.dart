@@ -7,8 +7,8 @@ import 'package:usb_host/widgets/oscilloscope_widget.dart';
 
 import '../misc/file_utilities.dart';
 import '../misc/parameter.dart';
-import '../protocol/serial_parse.dart';
-import '../protocol/serial_protocol.dart';
+import '../protocol/usb_parse.dart';
+import '../protocol/usb_protocol.dart';
 
 const hostCommandMax = 1000;
 const hostCommandMin = -1000;
@@ -28,7 +28,7 @@ class HostDataModel extends ChangeNotifier {
       _textUpdateCount = 0,
       _hostCommand = 0;
 
-  final serial = SerialApi();
+  final usb = UsbApi();
   var configData = ConfigData();
 
   var plotData = PlotData([],
@@ -48,7 +48,7 @@ class HostDataModel extends ChangeNotifier {
       final currentTime = DateTime.now().millisecondsSinceEpoch;
       _elapsedTime = (currentTime - _startTime).toDouble() / 1000.0;
       for (int i = 0; i < plotData.curves.length; i++) {
-        configData.telemetry[i].setBitValue(SerialParse.getData32(serial, i));
+        configData.telemetry[i].setBitValue(UsbParse.getData32(usb, i));
         plotData.curves[i].value = configData.telemetry[i].value;
       }
       plotData.updateSamples(_elapsedTime);
@@ -87,10 +87,10 @@ class HostDataModel extends ChangeNotifier {
     return configData.status.stateName;
   }
 
-  Future<bool> serialConnect() async {
+  Future<bool> usbConnect() async {
     bool connected = false;
-    if (!serial.isRunning) {
-      await serial.connect();
+    if (!usb.isRunning) {
+      await usb.connect();
       connected = await getParametersUserSequence();
       if (connected) {
         for (var parameter in configData.parameter) {
@@ -99,7 +99,7 @@ class HostDataModel extends ChangeNotifier {
         _userMessage = Message.info.connected;
       }
     } else {
-      serial.closePort();
+      usb.closePort();
       _userMessage = Message.info.disconnected;
     }
     return connected;
@@ -111,18 +111,18 @@ class HostDataModel extends ChangeNotifier {
 
   set command(int value) {
     _hostCommand = value;
-    SerialParse.setData32(serial, _hostCommand, SerialParse.commandValueIndex);
-    serial.sendPacket();
+    UsbParse.setData32(usb, _hostCommand, UsbParse.commandValueIndex);
+    usb.sendPacket();
     notifyListeners();
   }
 
   int get mode {
-    return SerialParse.getCommandMode(serial);
+    return UsbParse.getCommandMode(usb);
   }
 
   set mode(int value) {
-    SerialParse.setCommandMode(serial, value);
-    serial.sendPacket();
+    UsbParse.setCommandMode(usb, value);
+    usb.sendPacket();
   }
 
   Future<bool> getParametersUserSequence() async {
@@ -161,26 +161,26 @@ class HostDataModel extends ChangeNotifier {
 
   Future<int> getNumParameters() async {
     int deviceParameterLength = -1;
-    if (serial.isRunning) {
+    if (usb.isRunning) {
       _haltTelemetry = true;
 
-      SerialParse.setCommandMode(serial, SerialParse.readParameters);
-      SerialParse.setData32(serial, 0, SerialParse.parameterTableIndex);
-      serial.sendPacket();
-      serial.startWatchdog(parameterTimeout);
+      UsbParse.setCommandMode(usb, UsbParse.readParameters);
+      UsbParse.setData32(usb, 0, UsbParse.parameterTableIndex);
+      usb.sendPacket();
+      usb.startWatchdog(parameterTimeout);
 
-      while (!serial.watchdogTripped) {
-        if ((SerialParse.getCommandMode(serial) == SerialParse.readParameters &&
-            SerialParse.getData32(serial, SerialParse.parameterTableIndex) ==
+      while (!usb.watchdogTripped) {
+        if ((UsbParse.getCommandMode(usb) == UsbParse.readParameters &&
+            UsbParse.getData32(usb, UsbParse.parameterTableIndex) ==
                 0)) {
-          deviceParameterLength = SerialParse.getData32(serial, 1);
+          deviceParameterLength = UsbParse.getData32(usb, 1);
           break;
         }
         await Future.delayed(const Duration(milliseconds: 1));
       }
 
-      SerialParse.setCommandMode(serial, SerialParse.nullMode);
-      serial.sendPacket();
+      UsbParse.setCommandMode(usb, UsbParse.nullMode);
+      usb.sendPacket();
       _haltTelemetry = false;
     }
     return deviceParameterLength;
@@ -188,24 +188,24 @@ class HostDataModel extends ChangeNotifier {
 
   Future<bool> getParameters() async {
     bool success = false;
-    if (serial.isRunning) {
+    if (usb.isRunning) {
       _haltTelemetry = true;
       final parameters = configData.parameter;
       final returnBuffer = List<int>.filled(parameters.length, 0);
-      int parametersPerRx = SerialParse.maxStates - 1;
+      int parametersPerRx = UsbParse.maxStates - 1;
       int totalTransfers = (returnBuffer.length / parametersPerRx).ceil();
 
       for (int transfer = 0; transfer < totalTransfers; transfer++) {
-        SerialParse.setCommandMode(serial, SerialParse.readParameters);
-        SerialParse.setData32(
-            serial, transfer, SerialParse.parameterTableIndex);
-        serial.sendPacket();
-        serial.startWatchdog(parameterTimeout);
+        UsbParse.setCommandMode(usb, UsbParse.readParameters);
+        UsbParse.setData32(
+            usb, transfer, UsbParse.parameterTableIndex);
+        usb.sendPacket();
+        usb.startWatchdog(parameterTimeout);
 
-        while (!serial.watchdogTripped) {
-          if ((SerialParse.getCommandMode(serial) ==
-                  SerialParse.readParameters &&
-              SerialParse.getData32(serial, SerialParse.parameterTableIndex) ==
+        while (!usb.watchdogTripped) {
+          if ((UsbParse.getCommandMode(usb) ==
+                  UsbParse.readParameters &&
+              UsbParse.getData32(usb, UsbParse.parameterTableIndex) ==
                   transfer)) {
             for (int i = 0; i < parametersPerRx; i++) {
               int parameterIndex = i + (transfer * parametersPerRx);
@@ -214,15 +214,15 @@ class HostDataModel extends ChangeNotifier {
                 break;
               }
               parameters[parameterIndex].deviceValue =
-                  SerialParse.getData32(serial, i + 1);
+                  UsbParse.getData32(usb, i + 1);
             }
             break;
           }
           await Future.delayed(const Duration(milliseconds: 1));
         }
       }
-      SerialParse.setCommandMode(serial, SerialParse.nullMode);
-      serial.sendPacket();
+      UsbParse.setCommandMode(usb, UsbParse.nullMode);
+      usb.sendPacket();
       _haltTelemetry = false;
     }
     return success;
@@ -231,29 +231,29 @@ class HostDataModel extends ChangeNotifier {
   Future<bool> sendParameters() async {
     bool success = false;
     _userMessage = Message.error.parameterWrite;
-    if (serial.isRunning) {
+    if (usb.isRunning) {
       _haltTelemetry = true;
       final parameters = configData.parameter;
-      int parametersPerTx = SerialParse.maxStates - 1;
+      int parametersPerTx = UsbParse.maxStates - 1;
       int totalTransfers = (parameters.length / parametersPerTx).ceil();
 
       for (int transfer = 0; transfer < totalTransfers; transfer++) {
-        SerialParse.setCommandMode(serial, SerialParse.writeParameters);
-        SerialParse.setData32(
-            serial, transfer, SerialParse.parameterTableIndex);
+        UsbParse.setCommandMode(usb, UsbParse.writeParameters);
+        UsbParse.setData32(
+            usb, transfer, UsbParse.parameterTableIndex);
         for (int i = 0; i < parametersPerTx; i++) {
           int parameterIndex = i + (transfer * parametersPerTx);
           if (parameterIndex >= parameters.length) break;
-          SerialParse.setData32(serial,
+          UsbParse.setData32(usb,
               parameters[parameterIndex].currentValue?.toInt() ?? 0, i + 1);
         }
 
-        serial.sendPacket();
-        serial.startWatchdog(parameterTimeout);
-        while (!serial.watchdogTripped) {
-          if ((SerialParse.getCommandMode(serial) ==
-                  SerialParse.writeParameters &&
-              SerialParse.getData32(serial, SerialParse.parameterTableIndex) ==
+        usb.sendPacket();
+        usb.startWatchdog(parameterTimeout);
+        while (!usb.watchdogTripped) {
+          if ((UsbParse.getCommandMode(usb) ==
+                  UsbParse.writeParameters &&
+              UsbParse.getData32(usb, UsbParse.parameterTableIndex) ==
                   transfer)) break;
           await Future.delayed(const Duration(milliseconds: 1));
         }
@@ -280,14 +280,14 @@ class HostDataModel extends ChangeNotifier {
   Future<bool> flashParameters() async {
     _userMessage = null;
     bool success = false, nullComplete = false;
-    if (serial.isRunning) {
+    if (usb.isRunning) {
       _haltTelemetry = true;
-      SerialParse.setCommandMode(serial, SerialParse.nullMode);
-      serial.sendPacket();
-      serial.startWatchdog(parameterTimeout);
+      UsbParse.setCommandMode(usb, UsbParse.nullMode);
+      usb.sendPacket();
+      usb.startWatchdog(parameterTimeout);
 
-      while (!serial.watchdogTripped) {
-        if (SerialParse.getCommandMode(serial) == SerialParse.nullMode) {
+      while (!usb.watchdogTripped) {
+        if (UsbParse.getCommandMode(usb) == UsbParse.nullMode) {
           nullComplete = true;
           break;
         }
@@ -295,13 +295,13 @@ class HostDataModel extends ChangeNotifier {
       }
 
       if (nullComplete) {
-        SerialParse.setCommandMode(serial, SerialParse.flashParameters);
-        serial.sendPacket();
-        serial.startWatchdog(parameterTimeout);
+        UsbParse.setCommandMode(usb, UsbParse.flashParameters);
+        usb.sendPacket();
+        usb.startWatchdog(parameterTimeout);
 
-        while (!serial.watchdogTripped) {
-          if (SerialParse.getCommandMode(serial) ==
-              SerialParse.flashParameters) {
+        while (!usb.watchdogTripped) {
+          if (UsbParse.getCommandMode(usb) ==
+              UsbParse.flashParameters) {
             _userMessage = Message.info.parameterFlash;
             success = true;
             break;
@@ -314,8 +314,8 @@ class HostDataModel extends ChangeNotifier {
         _userMessage = Message.error.parameterFlash;
       }
 
-      SerialParse.setCommandMode(serial, SerialParse.nullMode);
-      serial.sendPacket();
+      UsbParse.setCommandMode(usb, UsbParse.nullMode);
+      usb.sendPacket();
       _haltTelemetry = false;
     }
     return success;
@@ -324,14 +324,14 @@ class HostDataModel extends ChangeNotifier {
   Future<bool> initBootloader() async {
     _userMessage = null;
     bool success = false, nullComplete = false;
-    if (serial.isRunning) {
+    if (usb.isRunning) {
       _haltTelemetry = true;
-      SerialParse.setCommandMode(serial, SerialParse.nullMode);
-      serial.sendPacket();
-      serial.startWatchdog(parameterTimeout);
+      UsbParse.setCommandMode(usb, UsbParse.nullMode);
+      usb.sendPacket();
+      usb.startWatchdog(parameterTimeout);
 
-      while (!serial.watchdogTripped) {
-        if (SerialParse.getCommandMode(serial) == SerialParse.nullMode) {
+      while (!usb.watchdogTripped) {
+        if (UsbParse.getCommandMode(usb) == UsbParse.nullMode) {
           nullComplete = true;
           break;
         }
@@ -339,13 +339,13 @@ class HostDataModel extends ChangeNotifier {
       }
 
       if (nullComplete) {
-        SerialParse.setCommandMode(serial, SerialParse.reprogramBootMode);
-        serial.sendPacket();
-        serial.startWatchdog(parameterTimeout);
+        UsbParse.setCommandMode(usb, UsbParse.reprogramBootMode);
+        usb.sendPacket();
+        usb.startWatchdog(parameterTimeout);
 
-        while (!serial.watchdogTripped) {
-          if (SerialParse.getCommandMode(serial) ==
-              SerialParse.reprogramBootMode) {
+        while (!usb.watchdogTripped) {
+          if (UsbParse.getCommandMode(usb) ==
+              UsbParse.reprogramBootMode) {
             _userMessage = Message.info.bootloader;
             success = true;
             break;
@@ -369,13 +369,13 @@ class HostDataModel extends ChangeNotifier {
   }
 
   void recordButtonEvent(void Function() onComplete) {
-    switch (serial.recordState) {
+    switch (usb.recordState) {
       case (RecordState.fileReady):
-        serial.recordState = RecordState.inProgress;
+        usb.recordState = RecordState.inProgress;
         break;
 
       case (RecordState.inProgress):
-        serial.recordState = RecordState.disabled;
+        usb.recordState = RecordState.disabled;
         parseDataFile(false, onComplete);
         break;
 
@@ -424,10 +424,10 @@ class HostDataModel extends ChangeNotifier {
     receivePort.listen((message) {
       if (message is String) {
         if (message.isNotEmpty) {
-          serial.dataFile = message;
-          serial.recordState = RecordState.fileReady;
+          usb.dataFile = message;
+          usb.recordState = RecordState.fileReady;
         } else {
-          serial.recordState = RecordState.disabled;
+          usb.recordState = RecordState.disabled;
         }
         notifyListeners();
       }
@@ -457,7 +457,7 @@ class HostDataModel extends ChangeNotifier {
     });
     await Isolate.spawn(parseDataFileIsolate, receivePort.sendPort);
     SendPort sendPort = await completer.future;
-    sendPort.send(fileSelection ? "" : serial.dataFile);
+    sendPort.send(fileSelection ? "" : usb.dataFile);
     sendPort.send(saveByteFile);
     sendPort.send(configData.toMap());
   }

@@ -24,7 +24,7 @@ class UsbHostApp extends StatelessWidget {
             create: (context) => ParameterTableModel()),
       ],
       child: MaterialApp(
-        title: 'Serial Host',
+        title: 'USB Host',
         theme: ThemeData(
           primaryColor: Colors.black,
           appBarTheme: const AppBarTheme(
