@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 
 const Color textColor = Colors.black;
@@ -32,16 +33,20 @@ class _InfoMessage {
 }
 
 class _ErrorMessage {
+  final connect = "could not connect to device";
   final parameterGet = "could not retrieve parameters";
   final parameterWrite = "could not send parameters";
   final parameterFlash = "could not flash parameters";
   final parameterNum = "could not get number of parameters";
-  final parameterLengthMatch = "number of parameters on device does not match config";
+  final parameterLengthMatch =
+      "number of parameters on device does not match config";
   parameterUpdate(Iterable<String> mismatchParameters) {
     final mismatchString = mismatchParameters.toString();
-    final mismatchStringFormatted = mismatchString.substring(1, mismatchString.length - 1);
+    final mismatchStringFormatted =
+        mismatchString.substring(1, mismatchString.length - 1);
     return "parameter(s) not updated: $mismatchStringFormatted";
   }
+
   final bootloader = "could not initiate bootloader";
 }
 
