@@ -32,6 +32,7 @@ class _InfoMessage {
 }
 
 class _ErrorMessage {
+  final connect = "could not connect to device";
   final parameterGet = "could not retrieve parameters";
   final parameterWrite = "could not send parameters";
   final parameterFlash = "could not flash parameters";

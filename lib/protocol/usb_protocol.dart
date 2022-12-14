@@ -6,6 +6,8 @@ import 'dart:typed_data';
 import 'package:usb_host/misc/file_utilities.dart';
 import 'usb_parse.dart';
 
+const _connectTimeout = 1000;
+
 enum ProtocolKeys {
   running,
   dataFile,
@@ -142,7 +144,10 @@ class _UsbProtocol {
 
   Future<bool> connect() async {
     String? serial;
-    _hid = HID(idVendor: UsbParse.vendorId, idProduct: UsbParse.productId, serial: serial);
+    _hid = HID(
+        idVendor: UsbParse.vendorId,
+        idProduct: UsbParse.productId,
+        serial: serial);
     return (_hid.open() >= 0);
   }
 
@@ -162,8 +167,8 @@ class _UsbProtocol {
   Future<bool> _rxProtocol() async {
     bool success = false;
     final hidRead = await _hid.read();
-    if(hidRead != null) {
-      for(int i = 0; i < hidRead.length; i++) {
+    if (hidRead != null) {
+      for (int i = 0; i < hidRead.length; i++) {
         _rxBytes[i] = hidRead[i];
       }
       success = true;
@@ -197,7 +202,6 @@ Future<void> _commIsolate(SendPort sendPort) async {
         if (configData.containsKey(key)) {
           // special actions for received maps
           switch (key) {
-
             case (ProtocolKeys.running):
               openClosePort = (configData[key] != data[key]);
               break;
@@ -224,7 +228,8 @@ Future<void> _commIsolate(SendPort sendPort) async {
         if (configData[ProtocolKeys.running] == true) {
           usb.connect().then((connected) {
             configData[ProtocolKeys.running] = connected;
-            sendPort.send({ProtocolKeys.running: configData[ProtocolKeys.running]});
+            sendPort
+                .send({ProtocolKeys.running: configData[ProtocolKeys.running]});
           });
         } else {
           usb.closePort();
@@ -234,14 +239,19 @@ Future<void> _commIsolate(SendPort sendPort) async {
     }
   });
 
-  while (configData[ProtocolKeys.running] == false) {
+  bool tryConnect = true;
+  Timer(const Duration(milliseconds: _connectTimeout), () {
+    tryConnect = false;
+  });
+
+  while (configData[ProtocolKeys.running] == false && tryConnect) {
     // yield to the listener
     await Future.delayed(Duration.zero);
   }
 
   while (configData[ProtocolKeys.running] == true) {
     final bytesSent = await usb._txProtocol();
-    if(bytesSent >= 0) {
+    if (bytesSent >= 0) {
       if (await usb._rxProtocol()) {
         sendPort.send(usb._rxBytes);
         if (configData[ProtocolKeys.recordState] == RecordState.inProgress) {
