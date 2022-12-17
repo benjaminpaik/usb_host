@@ -93,13 +93,6 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-  hidapi_dart:
-    dependency: "direct main"
-    description:
-      name: hidapi_dart
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "0.0.11"
   intl:
     dependency: "direct main"
     description:
@@ -114,6 +107,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "0.6.4"
+  libusb:
+    dependency: "direct main"
+    description:
+      name: libusb
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "0.3.23+2"
   lints:
     dependency: transitive
     description:

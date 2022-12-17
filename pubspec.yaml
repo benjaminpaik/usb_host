@@ -31,7 +31,7 @@ dependencies:
     sdk: flutter
   provider: ^6.0.3
   file_picker: ^4.6.1
-  hidapi_dart: ^0.0.11
+  libusb:  ^0.3.23+2
   intl: ^0.17.0
 
 
