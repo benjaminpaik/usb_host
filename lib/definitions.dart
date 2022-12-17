@@ -1,4 +1,18 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+
+final exeDir = Directory(Platform.resolvedExecutable)
+    .parent
+    .parent
+    .parent
+    .parent
+    .parent
+    .parent
+    .parent
+    .parent
+    .parent
+    .parent;
 
 const Color textColor = Colors.black;
 const double standardFontSize = 12;
@@ -20,7 +34,6 @@ final parameterHeaders = [
   parameterConnectedHeader
 ];
 
-
 class _InfoMessage {
   final connected = "connection successful";
   final disconnected = "disconnection successful";
@@ -37,12 +50,15 @@ class _ErrorMessage {
   final parameterWrite = "could not send parameters";
   final parameterFlash = "could not flash parameters";
   final parameterNum = "could not get number of parameters";
-  final parameterLengthMatch = "number of parameters on device does not match config";
+  final parameterLengthMatch =
+      "number of parameters on device does not match config";
   parameterUpdate(Iterable<String> mismatchParameters) {
     final mismatchString = mismatchParameters.toString();
-    final mismatchStringFormatted = mismatchString.substring(1, mismatchString.length - 1);
+    final mismatchStringFormatted =
+        mismatchString.substring(1, mismatchString.length - 1);
     return "parameter(s) not updated: $mismatchStringFormatted";
   }
+
   final bootloader = "could not initiate bootloader";
 }
 
@@ -50,5 +66,3 @@ class Message {
   static final info = _InfoMessage();
   static final error = _ErrorMessage();
 }
-
-
