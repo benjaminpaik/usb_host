@@ -1,9 +1,32 @@
 import 'dart:typed_data';
+import 'package:libusb/libusb32.dart';
 import 'package:usb_host/protocol/usb_protocol.dart';
 
 class UsbParse {
   static const vendorId = 1155;
   static const productId = 22352;
+  static const interface = 0;
+  static const transferTimeout = 1000;
+  static const maxRxBufferSize = 512;
+
+  static const interruptIn = 0x81;
+  static const ctrlIn = libusb_endpoint_direction.LIBUSB_ENDPOINT_IN |
+  libusb_request_type.LIBUSB_REQUEST_TYPE_CLASS |
+  libusb_request_recipient.LIBUSB_RECIPIENT_INTERFACE;
+  static const ctrlOut = libusb_endpoint_direction.LIBUSB_ENDPOINT_OUT |
+  libusb_request_type.LIBUSB_REQUEST_TYPE_CLASS |
+  libusb_request_recipient.LIBUSB_RECIPIENT_INTERFACE;
+
+  static const hidGetReport = 0x01;
+  static const hidGetIdle = 0x02;
+  static const hidGetProtocol = 0x03;
+  static const hidSetReport = 0x09;
+  static const hidSetIdle = 0x0A;
+  static const hidSetProtocol = 0x0B;
+
+  static const hidReportTypeInput = 0x01;
+  static const hidReportTypeOutput = 0x02;
+  static const hidReportTypeFeature = 0x03;
 
   static const commandValueIndex = 0;
   static const parameterTableIndex = 0;

@@ -1,10 +1,14 @@
 import 'dart:async';
-import 'package:hidapi_dart/hid.dart';
+import 'dart:ffi';
+import 'package:ffi/ffi.dart' show malloc;
+import 'package:libusb/libusb32.dart';
 import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 import 'package:usb_host/misc/file_utilities.dart';
 import 'usb_parse.dart';
+
+const _connectTimeout = 1000;
 
 enum ProtocolKeys {
   running,
@@ -127,51 +131,123 @@ class UsbApi {
 
 class _UsbProtocol {
   int errorCount = 0;
-  final _txBytes = Uint8List(UsbParse.usbHidBytes + 1);
-  final _rxBytes = Uint8List(UsbParse.usbHidBytes);
-  var _hid = HID();
+  final _txBytes = malloc<Uint8>(UsbParse.usbHidBytes);
+  var _rxBytes = Uint8List(UsbParse.usbHidBytes);
+  final Pointer<Uint8> _rxBuffer = malloc<Uint8>(UsbParse.maxRxBufferSize);
+  final Pointer<Int32> _rxLength = malloc<Int32>(1);
+
+  final libusb = Libusb(loadLibrary());
+  Pointer<libusb_device_handle>? devHandle = nullptr;
 
   _UsbProtocol() {
     UsbParse.crc16Generate();
     // initialize TX bytes
-    _txBytes[UsbParse.commandModeIndex + 1] = 0;
-    _txBytes[UsbParse.timestampIndex + 1] = 0;
+    _txBytes[UsbParse.commandModeIndex] = 0;
+    _txBytes[UsbParse.timestampIndex] = 0;
+    // initialize RX buffer
+    _rxBuffer
+        .asTypedList(UsbParse.maxRxBufferSize)
+        .fillRange(0, UsbParse.maxRxBufferSize, 0);
+    if (libusb.libusb_init(nullptr) < 0) {
+      throw Exception("failed to load library");
+    }
   }
 
-  Future<bool> connect() async {
-    String? serial;
-    _hid = HID(idVendor: UsbParse.vendorId, idProduct: UsbParse.productId, serial: serial);
-    return (_hid.open() >= 0);
+  bool findDevice(int vid, int pid) {
+    final deviceListPtr = malloc<Pointer<Pointer<libusb_device>>>();
+    bool deviceFound = false;
+    if(libusb.libusb_get_device_list(nullptr, deviceListPtr) > 0) {
+      final deviceList = deviceListPtr.value;
+      final descPtr = malloc<libusb_device_descriptor>();
+      final path = malloc<Uint8>(8);
+
+      for (int i = 0; deviceList[i] != nullptr; i++) {
+        final result = libusb.libusb_get_device_descriptor(deviceList[i], descPtr);
+        if(result >= 0) {
+          if(vid == descPtr.ref.idVendor && pid == descPtr.ref.idProduct) {
+            deviceFound = true;
+          }
+        }
+      }
+      malloc.free(descPtr);
+      malloc.free(path);
+      libusb.libusb_free_device_list(deviceList, 1);
+    }
+    malloc.free(deviceListPtr);
+    return deviceFound;
+  }
+
+  void destructor() {
+    malloc.free(_txBytes);
+    malloc.free(_rxBuffer);
+    malloc.free(_rxLength);
+  }
+
+  bool connect() {
+    if(findDevice(UsbParse.vendorId, UsbParse.productId)) {
+      int error = 0;
+      devHandle = libusb.libusb_open_device_with_vid_pid(
+          nullptr, UsbParse.vendorId, UsbParse.productId);
+      if (devHandle != null) {
+        error = libusb.libusb_detach_kernel_driver(devHandle!, 0);
+        error = libusb.libusb_claim_interface(devHandle!, UsbParse.interface);
+        if (error < 0) {
+          devHandle = nullptr;
+          // final errorPointer = libusb.libusb_error_name(error);
+          // final errorMessage = String.fromCharCodes(errorPointer.asTypedList(20));
+        }
+      }
+    }
+    return (devHandle != nullptr);
   }
 
   void closePort() {
-    _hid.close();
+    if (devHandle != null) {
+      libusb.libusb_close(devHandle!);
+      libusb.libusb_exit(nullptr);
+    }
   }
 
-  Future<int> _txProtocol() async {
+  int _txProtocol() {
     int bytesSent = 0;
-    _txBytes[UsbParse.timestampIndex + 1]++;
-    await _hid.write(_txBytes).then((value) {
-      bytesSent = value;
-    });
+    _txBytes[UsbParse.timestampIndex]++;
+    if (devHandle != null) {
+      bytesSent = libusb.libusb_control_transfer(
+          devHandle!,
+          UsbParse.ctrlOut,
+          UsbParse.hidSetReport,
+          (UsbParse.hidReportTypeOutput << 8) | 0x00,
+          UsbParse.interface,
+          _txBytes,
+          UsbParse.usbHidBytes,
+          UsbParse.transferTimeout);
+    }
     return bytesSent;
   }
 
-  Future<bool> _rxProtocol() async {
-    bool success = false;
-    final hidRead = await _hid.read();
-    if(hidRead != null) {
-      for(int i = 0; i < hidRead.length; i++) {
-        _rxBytes[i] = hidRead[i];
+  bool _rxProtocol() {
+    int result = -1;
+    if (devHandle != null) {
+      result = libusb.libusb_interrupt_transfer(
+          devHandle!,
+          UsbParse.interruptIn,
+          _rxBuffer,
+          UsbParse.usbHidBytes,
+          _rxLength,
+          UsbParse.transferTimeout);
+      if (result >= 0) {
+        _rxBytes = _rxBuffer.asTypedList(_rxLength[0]);
       }
-      success = true;
     }
-    return success;
+    return (result >= 0);
   }
 
   void loadTxData(List<int> data) {
-    for (int i = 0; i < UsbParse.usbHidBytes; i++) {
-      _txBytes[i + 1] = data[i];
+    final txLength = (data.length < UsbParse.usbHidBytes)
+        ? data.length
+        : UsbParse.usbHidBytes;
+    for (int i = 0; i < txLength; i++) {
+      _txBytes[i] = data[i];
     }
   }
 }
@@ -195,7 +271,6 @@ Future<void> _commIsolate(SendPort sendPort) async {
         if (configData.containsKey(key)) {
           // special actions for received maps
           switch (key) {
-
             case (ProtocolKeys.running):
               openClosePort = (configData[key] != data[key]);
               break;
@@ -220,10 +295,9 @@ Future<void> _commIsolate(SendPort sendPort) async {
       // open and close COM port based on running key
       if (openClosePort) {
         if (configData[ProtocolKeys.running] == true) {
-          usb.connect().then((connected) {
-            configData[ProtocolKeys.running] = connected;
-            sendPort.send({ProtocolKeys.running: configData[ProtocolKeys.running]});
-          });
+          final connected = usb.connect();
+          configData[ProtocolKeys.running] = connected;
+          sendPort.send({ProtocolKeys.running: configData[ProtocolKeys.running]});
         } else {
           usb.closePort();
           receivePort.close();
@@ -232,15 +306,20 @@ Future<void> _commIsolate(SendPort sendPort) async {
     }
   });
 
-  while (configData[ProtocolKeys.running] == false) {
+  bool tryConnect = true;
+  Timer(const Duration(milliseconds: _connectTimeout), () {
+    tryConnect = false;
+  });
+
+  while (configData[ProtocolKeys.running] == false && tryConnect) {
     // yield to the listener
     await Future.delayed(Duration.zero);
   }
 
   while (configData[ProtocolKeys.running] == true) {
-    final bytesSent = await usb._txProtocol();
-    if(bytesSent >= 0) {
-      if (await usb._rxProtocol()) {
+    final bytesSent = usb._txProtocol();
+    if (bytesSent >= 0) {
+      if (usb._rxProtocol()) {
         sendPort.send(usb._rxBytes);
         if (configData[ProtocolKeys.recordState] == RecordState.inProgress) {
           writer?.write(usb._rxBytes.toString() + newline);
@@ -250,4 +329,23 @@ Future<void> _commIsolate(SendPort sendPort) async {
     // yield to the listener
     await Future.delayed(Duration.zero);
   }
+  // free memory
+  usb.destructor();
+}
+
+DynamicLibrary loadLibrary() {
+  String path = "";
+  if (Platform.isWindows) {
+    path = '${Directory.current.path}\\libusb\\libusb-1.0.dll';
+  }
+  else if (Platform.isMacOS) {
+    path = '${Directory.current.path}/libusb/libusb-1.0.dylib';
+  } else if (Platform.isLinux) {
+    path = '${Directory.current.path}/libusb/libusb-1.0.so';
+  }
+  else {
+    throw 'libusb dynamic library not found';
+  }
+  print(path);
+  return DynamicLibrary.open(path);
 }

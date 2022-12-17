@@ -1,0 +1,25 @@
+
+MAC/Linux Run: Must run executable as "sudo ./usb_host" to use library (mac .app files are actually folders with the executable nested inside).
+MAC load library: opening a .dylib in flutter on mac searches multiple locations beyond the specified path.
+MAC File Access: Security and Privacy -> Full Disk Accesss
+MAC Sandbox: Disable sandboxing in macos/Runner/DebugProfile.entitlements
+MAC USB Device: Check MAC recognizes device by going to "System Information"
+MAC ARM: generate ARM specific or universal dylib by running
+
+mkdir build
+cd build
+cmake .. -DCMAKE_OSX_ARCHITECTURES=x86_64;arm64
+cmake --build .
+cmake --build . --target install
+
+references from HIDAPI:
+https://github.com/libusb/hidapi/blob/master/BUILD.cmake.md
+https://github.com/libusb/hidapi/discussions/473
+
+
+MAC dmg installer:
+
+Use “create-dmg”: https://github.com/create-dmg/create-dmg
+
+Run command:
+create-dmg --window-size 430 300 --window-pos 475 250 --icon usb_host.app 100 35  --app-drop-link 300 30  usb_host.dmg Desktop/usb_host

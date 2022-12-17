@@ -104,14 +104,6 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-  hidapi_dart:
-    dependency: "direct main"
-    description:
-      name: hidapi_dart
-      sha256: "72880e40287147026ae477357e9a0a7e125884fde069855e4813e13d39f97ecb"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.0.11"
   intl:
     dependency: "direct main"
     description:
@@ -196,7 +188,7 @@ packages:
     dependency: "direct main"
     description:
       name: provider
-      sha256: e1e7413d70444ea3096815a60fe5da1b11bda8a9dc4769252cc82c53536f8bcc
+      sha256: cdbe7530b12ecd9eb455bdaa2fcb8d4dad22e80b8afb4798b41479d5ce26847f
       url: "https://pub.dev"
     source: hosted
     version: "6.0.5"
