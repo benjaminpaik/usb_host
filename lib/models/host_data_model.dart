@@ -99,7 +99,6 @@ class HostDataModel extends ChangeNotifier {
         _userMessage = Message.info.connected;
       } else {
         usb.closePort();
-        _userMessage = Message.error.connect;
       }
     } else {
       usb.closePort();
@@ -159,6 +158,7 @@ class HostDataModel extends ChangeNotifier {
         _userMessage = Message.error.parameterNum;
       }
     });
+    print("error: $_userMessage");
     return success;
   }
 

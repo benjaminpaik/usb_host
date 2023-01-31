@@ -21,9 +21,9 @@ class ParameterPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const MenuBar(),
+        title: const CustomMenuBar(),
       ),
-      drawer: const NavigationDrawer(),
+      drawer: const CustomNavigationDrawer(),
       body: Column(
         children: [
           Expanded(
