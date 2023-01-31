@@ -10,8 +10,8 @@ const controlRoute = '/';
 const parameterRoute = '/parameter';
 const statusRoute = '/status';
 
-class NavigationDrawer extends StatelessWidget {
-  const NavigationDrawer({Key? key}) : super(key: key);
+class CustomNavigationDrawer extends StatelessWidget {
+  const CustomNavigationDrawer({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -23,13 +23,13 @@ class NavigationDrawer extends StatelessWidget {
             decoration: BoxDecoration(color: Theme.of(context).primaryColor),
             child: Text(
               'Menu',
-              style: Theme.of(context).textTheme.headline1,
+              style: Theme.of(context).textTheme.displayLarge,
             ),
           ),
           ListTile(
             title: Text(
               'Control',
-              style: Theme.of(context).textTheme.bodyText1,
+              style: Theme.of(context).textTheme.bodyLarge,
             ),
             onTap: () {
               Navigator.pushReplacementNamed(context, controlRoute);
@@ -38,7 +38,7 @@ class NavigationDrawer extends StatelessWidget {
           ListTile(
             title: Text(
               'Parameter',
-              style: Theme.of(context).textTheme.bodyText1,
+              style: Theme.of(context).textTheme.bodyLarge,
             ),
             onTap: () {
               Navigator.pushReplacementNamed(context, parameterRoute);
@@ -47,7 +47,7 @@ class NavigationDrawer extends StatelessWidget {
           ListTile(
             title: Text(
               'Status',
-              style: Theme.of(context).textTheme.bodyText1,
+              style: Theme.of(context).textTheme.bodyLarge,
             ),
             onTap: () {
               Navigator.pushReplacementNamed(context, statusRoute);
@@ -59,8 +59,8 @@ class NavigationDrawer extends StatelessWidget {
   }
 }
 
-class MenuBar extends StatelessWidget {
-  const MenuBar({Key? key}) : super(key: key);
+class CustomMenuBar extends StatelessWidget {
+  const CustomMenuBar({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

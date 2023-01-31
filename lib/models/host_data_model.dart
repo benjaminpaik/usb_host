@@ -204,7 +204,7 @@ class HostDataModel extends ChangeNotifier {
 
         while (!usb.watchdogTripped) {
           if ((UsbParse.getCommandMode(usb) ==
-              UsbParse.readParameters &&
+                  UsbParse.readParameters &&
               UsbParse.getData32(usb, UsbParse.parameterTableIndex) ==
                   transfer)) {
             for (int i = 0; i < parametersPerRx; i++) {
@@ -252,7 +252,7 @@ class HostDataModel extends ChangeNotifier {
         usb.startWatchdog(parameterTimeout);
         while (!usb.watchdogTripped) {
           if ((UsbParse.getCommandMode(usb) ==
-              UsbParse.writeParameters &&
+                  UsbParse.writeParameters &&
               UsbParse.getData32(usb, UsbParse.parameterTableIndex) ==
                   transfer)) break;
           await Future.delayed(const Duration(milliseconds: 1));
@@ -344,7 +344,8 @@ class HostDataModel extends ChangeNotifier {
         usb.startWatchdog(parameterTimeout);
 
         while (!usb.watchdogTripped) {
-          if (UsbParse.getCommandMode(usb) == UsbParse.reprogramBootMode) {
+          if (UsbParse.getCommandMode(usb) ==
+              UsbParse.reprogramBootMode) {
             _userMessage = Message.info.bootloader;
             success = true;
             break;

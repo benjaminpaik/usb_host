@@ -13,9 +13,9 @@ class StatusPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const MenuBar(),
+        title: const CustomMenuBar(),
       ),
-      drawer: const NavigationDrawer(),
+      drawer: const CustomNavigationDrawer(),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
