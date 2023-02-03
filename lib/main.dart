@@ -1,11 +1,11 @@
-import 'package:usb_host/screens/status_screen.dart';
+import 'package:usb_host/models/screen_model.dart';
+import 'package:usb_host/screens/home_route.dart';
 import 'package:flutter/material.dart';
 import 'package:usb_host/models/host_data_model.dart';
 import 'package:usb_host/models/parameter_table_model.dart';
-import 'package:usb_host/screens/control_screen.dart';
-import 'package:usb_host/screens/parameter_screen.dart';
-import 'package:usb_host/widgets/navigation_widget.dart';
 import 'package:provider/provider.dart';
+
+const homeRoute = '/';
 
 void main() {
   runApp(const UsbHostApp());
@@ -18,6 +18,8 @@ class UsbHostApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider<ScreenModel>(
+            create: (context) => ScreenModel()),
         ChangeNotifierProvider<HostDataModel>(
             create: (context) => HostDataModel()),
         ChangeNotifierProvider<ParameterTableModel>(
@@ -26,6 +28,7 @@ class UsbHostApp extends StatelessWidget {
       child: MaterialApp(
         title: 'USB Host',
         theme: ThemeData(
+          useMaterial3: true,
           primaryColor: Colors.black,
           appBarTheme: const AppBarTheme(
             color: Colors.white,
@@ -37,16 +40,11 @@ class UsbHostApp extends StatelessWidget {
             titleLarge: TextStyle(fontSize: 14.0, fontWeight: FontWeight.normal, color: Colors.black),
             titleMedium: TextStyle(fontSize: 14.0, fontWeight: FontWeight.normal, color: Colors.black),
           ),
-          colorScheme: ColorScheme.fromSwatch().copyWith(
-              primary: Colors.grey,
-              onPrimary: Colors.black,
-          ),
+          colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.grey),
         ),
-        initialRoute: controlRoute,
+        initialRoute: homeRoute,
         routes: {
-          controlRoute: (context) => const ControlPage(),
-          parameterRoute: (context) => const ParameterPage(),
-          statusRoute: (context) => const StatusPage(),
+          homeRoute: (context) => const HomeRoute(),
         },
       ),
     );
