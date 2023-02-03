@@ -18,7 +18,7 @@ class BottomNavigation extends StatelessWidget {
         return BottomNavigationBar(
           items: const <BottomNavigationBarItem>[
             BottomNavigationBarItem(
-              icon: Icon(Icons.add_chart),
+              icon: Icon(Icons.auto_graph),
               label: 'Control',
             ),
             BottomNavigationBarItem(
