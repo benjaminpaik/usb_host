@@ -22,7 +22,7 @@ class HostDataModel extends ChangeNotifier {
   String? _userMessage;
   double _elapsedTime = 0;
   bool _haltTelemetry = true;
-  bool saveByteFile = false;
+  bool _saveByteFile = false;
   int _startTime = 0,
       _graphUpdateCount = 0,
       _textUpdateCount = 0,
@@ -71,6 +71,15 @@ class HostDataModel extends ChangeNotifier {
 
   int get textUpdateCount {
     return _textUpdateCount;
+  }
+
+  set saveByteFile(bool save) {
+    _saveByteFile = save;
+    notifyListeners();
+  }
+
+  bool get saveByteFile {
+    return _saveByteFile;
   }
 
   set statusState(String? state) {
