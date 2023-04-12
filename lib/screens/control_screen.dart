@@ -14,11 +14,11 @@ class ControlPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Expanded(flex: 18, child: OscilloscopePlots()),
+        Expanded(flex: 20, child: OscilloscopePlots()),
         const Spacer(),
         const Expanded(flex: 2, child: CmdInput()),
         const Spacer(),
-        Expanded(flex: 2, child: CmdButtons()),
+        Expanded(flex: 3, child: CmdButtons()),
         const Spacer(),
       ],
     );
@@ -180,9 +180,9 @@ class CmdButtons extends StatelessWidget {
           childAspectRatio: buttonWidth / buttonHeight,
           maxCrossAxisExtent: buttonWidth,
           shrinkWrap: true,
-          padding: const EdgeInsets.all(4),
-          mainAxisSpacing: 5,
-          crossAxisSpacing: 5,
+          padding: const EdgeInsets.symmetric(vertical: 1.0, horizontal: 25.0),
+          mainAxisSpacing: 25,
+          crossAxisSpacing: 25,
           children: List.generate(
               modes.length,
               (index) => ElevatedButton(

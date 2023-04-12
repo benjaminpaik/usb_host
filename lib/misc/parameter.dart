@@ -24,7 +24,7 @@ class Parameter {
   int? connectedValue;
   int? deviceValue;
 
-  bool setCurrentFromText(String text) {
+  void setCurrentFromText(String text) {
     final byteData = ByteData(4);
 
     try {
@@ -35,10 +35,7 @@ class Parameter {
         byteData.setInt32(0, value.toInt());
       }
       currentValue = byteData.getInt32(0);
-      return true;
-    } catch (_) {
-      return false;
-    }
+    } catch (_) {}
   }
 
   String get currentString {

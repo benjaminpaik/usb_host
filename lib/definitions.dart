@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 const Color textColor = Colors.black;
@@ -20,7 +19,6 @@ final parameterHeaders = [
   parameterFileHeader,
   parameterConnectedHeader
 ];
-
 
 class _InfoMessage {
   final connected = "connection successful";
@@ -54,5 +52,3 @@ class Message {
   static final info = _InfoMessage();
   static final error = _ErrorMessage();
 }
-
-

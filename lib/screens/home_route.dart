@@ -16,22 +16,14 @@ class HomeRoute extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     final appBody = Selector<ScreenModel, int>(
       selector: (_, selectorModel) => selectorModel.screenIndex,
       builder: (context, screenIndex, child) {
-
-        switch(screenIndex) {
-
-          case(0):
-            return const ControlPage();
-
-          case(1):
-            return const ParameterPage();
-
-          default:
-            return const StatusPage();
-        }
+        return switch(screenIndex) {
+          0 => const ControlPage(),
+          1 => const ParameterPage(),
+          _ => const StatusPage(),
+        };
       },
     );
 

@@ -20,10 +20,10 @@ class ParameterPage extends StatelessWidget {
 
     return Column(
       children: [
-        Expanded(
+        const Expanded(
           flex: 5,
           child: Row(
-            children: const [
+            children: [
               ParameterTable(),
             ],
           ),
@@ -141,7 +141,7 @@ class ParameterTable extends StatelessWidget {
 
 class ParameterRow {
   late DataRow row;
-  int index = 0;
+  int index;
 
   ParameterRow(BuildContext context, {Key? key, this.index = -1}) {
     final parameterTableModel =
@@ -164,15 +164,7 @@ class ParameterRow {
             style:
                 const TextStyle(fontSize: standardFontSize, color: textColor),
             onChanged: (text) {
-              try {
-                parameterTableModel.cellText = text;
-              } catch (_) {}
-            },
-            onEditingComplete: () {
-              if (parameters[index]
-                  .setCurrentFromText(parameterTableModel.cellText)) {
-                parameterTableModel.updateTable();
-              }
+              parameters[index].setCurrentFromText(text);
             },
           ),
         ),

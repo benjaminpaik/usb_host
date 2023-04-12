@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 class ParameterTableModel extends ChangeNotifier {
 
   List<bool> _rowSelection = <bool>[];
-  String cellText = "";
 
   void initNumParameters(int numParameters) {
     _rowSelection = List.filled(numParameters, false);

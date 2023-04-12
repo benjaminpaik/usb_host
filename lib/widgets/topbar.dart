@@ -161,7 +161,7 @@ class TopBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(
           vertical: _verticalPadding, horizontal: _horizontalPadding),
       child: SizedBox(
-        width: 110.0,
+        width: 120.0,
         child: ElevatedButton(
           child: Selector<HostDataModel, bool>(
             selector: (_, selectorModel) => selectorModel.usb.isRunning,
