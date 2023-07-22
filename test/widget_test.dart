@@ -5,26 +5,26 @@
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:usb_host/main.dart';
+import 'package:usb_host/definitions.dart';
+import 'package:usb_host/misc/parameter.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const UsbHostApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  test("Parameter value should be settable and gettable", () {
+    final parameter = Parameter();
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // test floating point numbers
+    const testInput1 = "3.14159";
+    parameter.type = ParameterType.float;
+    parameter.setCurrentFromText(testInput1);
+    expect(parameter.currentString, testInput1);
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // test integers
+    const testInput2 = "1234567";
+    parameter.type = ParameterType.long;
+    parameter.setCurrentFromText(testInput2);
+    expect(parameter.currentString, testInput2);
   });
+
 }
