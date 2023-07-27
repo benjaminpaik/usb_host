@@ -114,6 +114,7 @@ class HostDataModel extends ChangeNotifier {
       usb.closePort();
       _userMessage = Message.info.disconnected;
     }
+    notifyListeners();
     return connected;
   }
 

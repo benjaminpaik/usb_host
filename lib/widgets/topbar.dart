@@ -124,7 +124,7 @@ class TopBar extends StatelessWidget {
       onPressed: () {
         hostDataModel.initBootloader().then((_) {
           displayMessage(context, hostDataModel.userMessage);
-          hostDataModel.usb.closePort();
+          hostDataModel.usbConnect();
         });
       },
       shortcut: const SingleActivator(LogicalKeyboardKey.keyP, control: true),
