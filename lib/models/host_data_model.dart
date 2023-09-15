@@ -203,9 +203,8 @@ class HostDataModel extends ChangeNotifier {
     if (usb.isRunning) {
       _haltTelemetry = true;
       final parameters = configData.parameter;
-      final returnBuffer = List<int>.filled(parameters.length, 0);
       int parametersPerRx = UsbParse.maxStates - 1;
-      int totalTransfers = (returnBuffer.length / parametersPerRx).ceil();
+      int totalTransfers = (parameters.length / parametersPerRx).ceil();
 
       for (int transfer = 0; transfer < totalTransfers; transfer++) {
         UsbParse.setCommandMode(usb, UsbParse.readParameters);

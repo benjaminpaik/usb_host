@@ -235,14 +235,14 @@ ConfigData parseConfigFile(String configText) {
       try {
         switch (fields.length) {
           case (_telemetryFields):
-            if (line.contains("index") == false) {
+            if (line.startsWith("index") == false) {
               errorMessage += "telemetry ${fields.first}";
               configData.telemetry.add(parseTelemetry(line));
             }
             break;
 
           case (_statusFields):
-            if (line.contains("index") == false) {
+            if (line.startsWith("index") == false) {
               errorMessage += "status ${fields.first}";
               final statusFields = parseStatus(line);
               configData.status.createField(statusFields[0], statusFields[1]);
@@ -263,7 +263,7 @@ ConfigData parseConfigFile(String configText) {
             break;
 
           case (_parameterFields):
-            if (line.contains("index") == false) {
+            if (line.startsWith("index") == false) {
               errorMessage += "parameter ${fields.first}";
               configData.parameter.add(parseParameter(line));
             }
