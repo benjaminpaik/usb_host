@@ -6,6 +6,19 @@ import '../definitions.dart';
 import '../misc/parameter.dart';
 import 'package:usb_host/models/parameter_table_model.dart';
 
+const parameterIndexHeader = "index";
+const parameterNameHeader = "name";
+const parameterCurrentHeader = "current";
+const parameterFileHeader = "file";
+const parameterConnectedHeader = "connected";
+final parameterHeaders = [
+  parameterIndexHeader,
+  parameterNameHeader,
+  parameterCurrentHeader,
+  parameterFileHeader,
+  parameterConnectedHeader
+];
+
 class ParameterPage extends StatelessWidget {
   static const String title = "Parameter";
   static Icon icon = const Icon(Icons.desktop_windows_outlined);
@@ -15,7 +28,7 @@ class ParameterPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final parameterTableModel =
-        Provider.of<ParameterTableModel>(context, listen: false);
+    Provider.of<ParameterTableModel>(context, listen: false);
     final hostDataModel = Provider.of<HostDataModel>(context, listen: false);
 
     return Column(
@@ -81,35 +94,35 @@ class ParameterTable extends StatelessWidget {
         child: Consumer<ParameterTableModel>(
           builder: (context, length, child) {
             final parameterTableModel =
-                Provider.of<ParameterTableModel>(context, listen: false);
+            Provider.of<ParameterTableModel>(context, listen: false);
             final parameters =
                 Provider.of<HostDataModel>(context, listen: false)
                     .configData
                     .parameter;
             final parameterRows = List<DataRow>.generate(parameters.length,
-                (index) => ParameterRow(context, index: index).row);
+                    (index) => ParameterRow(context, index: index).row);
             final headers = parameterHeaders
                 .map((e) => DataColumn(
-                    label: TextButton(
-                        onPressed: () {
-                          switch (e) {
-                            case (parameterFileHeader):
-                              copyFileParameters(
-                                  parameterTableModel, parameters);
-                              parameterTableModel.updateTable();
-                              break;
+                label: TextButton(
+                    onPressed: () {
+                      switch (e) {
+                        case (parameterFileHeader):
+                          copyFileParameters(
+                              parameterTableModel, parameters);
+                          parameterTableModel.updateTable();
+                          break;
 
-                            case (parameterConnectedHeader):
-                              copyConnectedParameters(
-                                  parameterTableModel, parameters);
-                              parameterTableModel.updateTable();
-                              break;
+                        case (parameterConnectedHeader):
+                          copyConnectedParameters(
+                              parameterTableModel, parameters);
+                          parameterTableModel.updateTable();
+                          break;
 
-                            default:
-                              break;
-                          }
-                        },
-                        child: Text(e))))
+                        default:
+                          break;
+                      }
+                    },
+                    child: Text(e))))
                 .toList();
             return DataTable(columns: headers, rows: parameterRows);
           },
@@ -145,7 +158,7 @@ class ParameterRow {
 
   ParameterRow(BuildContext context, {Key? key, this.index = -1}) {
     final parameterTableModel =
-        Provider.of<ParameterTableModel>(context, listen: false);
+    Provider.of<ParameterTableModel>(context, listen: false);
     final parameters =
         Provider.of<HostDataModel>(context, listen: false).configData.parameter;
 
@@ -160,9 +173,9 @@ class ParameterRow {
         DataCell(
           TextField(
             controller:
-                TextEditingController(text: parameters[index].currentString),
+            TextEditingController(text: parameters[index].currentString),
             style:
-                const TextStyle(fontSize: standardFontSize, color: textColor),
+            const TextStyle(fontSize: standardFontSize, color: textColor),
             onChanged: (text) {
               parameters[index].setCurrentFromText(text);
             },

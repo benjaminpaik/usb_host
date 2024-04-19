@@ -32,6 +32,7 @@ class UsbApi {
   final ReceivePort _receivePort;
   // clone initial config data
   final _configData = {..._initConfigData};
+  var _watchdogTimer = Timer(const Duration(milliseconds: 1000), () { });
   var _watchdogTripped = false;
   bool get watchdogTripped => _watchdogTripped;
 
@@ -111,7 +112,8 @@ class UsbApi {
 
   void startWatchdog(int timeout) {
     _watchdogTripped = false;
-    Timer(Duration(milliseconds: timeout), () {
+    _watchdogTimer.cancel();
+    _watchdogTimer = Timer(Duration(milliseconds: timeout), () {
       _watchdogTripped = true;
     });
   }
@@ -346,6 +348,5 @@ DynamicLibrary loadLibrary() {
   else {
     throw 'libusb dynamic library not found';
   }
-  print(path);
   return DynamicLibrary.open(path);
 }

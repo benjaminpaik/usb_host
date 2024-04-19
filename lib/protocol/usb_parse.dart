@@ -34,10 +34,10 @@ class UsbParse {
   static const programDataIndex = 2;
 
   static const nullMode = 0;
-  static const reprogramBootMode = 252;
-  static const readParameters = 253;
-  static const writeParameters = 254;
-  static const flashParameters = 255;
+  static const readParameters = 252;
+  static const writeParameters = 253;
+  static const flashParameters = 254;
+  static const reprogramBootMode = 255;
 
   static const usbHidBytes = 64;
   static const bytesPerState = 4;
