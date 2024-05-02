@@ -114,7 +114,6 @@ class BitStatus {
   final _numBits = List<int>.empty(growable: true);
   final _bitOffset = List<int>.empty(growable: true);
   final _bitMask = List<int>.empty(growable: true);
-  // String selectedField = "";
   String stateName = "";
   int stateIndex = 0;
   int _value = 0;

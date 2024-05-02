@@ -1,12 +1,9 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 
-const int _minPoints = 2;
-
 class PlotData {
   final _xTickTimes = <double>[];
   List<PlotCurve> curves;
-  final int maxSamples;
   int _selectedIndex = 0;
 
   Color backgroundColor;
@@ -21,7 +18,6 @@ class PlotData {
 
   PlotData(this.curves,
       {this.backgroundColor = Colors.white,
-      this.maxSamples = 100,
       this.xSegments = 4,
       this.ySegments = 4,
       this.tickWidth = 1,
@@ -60,11 +56,11 @@ class PlotData {
 
   void updateSamples(double time) {
     for (var element in curves) {
-      element._updateSample(maxSamples, time);
+      element._updateSample(time);
     }
   }
 
-  void saveSamples() {
+  void _saveSamples() {
     for (var element in curves) {
       element._saveSamples();
     }
@@ -85,8 +81,9 @@ class PlotCurve {
   final _points = <Point<double>>[];
   var _savedPoints = <Point<double>>[];
   final double _maxValue, _minValue, _dataRange;
-  double _timeSpan = 1.0;
   double _timeReference = 0.0;
+  int _maxSamples = 100;
+  double _timeSpan = 5.0;
 
   double _value = 0;
   bool displayed = true;
@@ -123,9 +120,13 @@ class PlotCurve {
     _value = input;
   }
 
-  void updateTimeSpan(List<Point<double>> points) {
+  void updateTimeScaling(int maxSamples, double timeSpan) {
+    _maxSamples = maxSamples;
+    _timeSpan = timeSpan;
+  }
+
+  void _updateTimeReference(List<Point<double>> points) {
     _timeReference = points.first.x;
-    _timeSpan = points.last.x - _timeReference;
   }
 
   double _getTickTime(double width, double x) {
@@ -144,9 +145,9 @@ class PlotCurve {
     return ((_maxValue - value) / (_maxValue - _minValue)) * height;
   }
 
-  void _updateSample(int maxSamples, double time) {
+  void _updateSample(double time) {
     _points.add(Point<double>(time, _value));
-    if (_points.length > maxSamples) {
+    if (_points.length > _maxSamples) {
       _points.removeAt(0);
     }
   }
@@ -158,6 +159,7 @@ class PlotCurve {
   void _resetSamples() {
     _points.clear();
   }
+
 }
 
 class Oscilloscope extends StatefulWidget {
@@ -176,7 +178,12 @@ class OscilloscopeState extends State<Oscilloscope>
     return GestureDetector(
       onTapDown: (TapDownDetails _) {
         widget.plotData._updatePlots = !widget.plotData._updatePlots;
-        widget.plotData.saveSamples();
+        if(widget.plotData._updatePlots) {
+          widget.plotData.resetSamples();
+        }
+        else {
+          widget.plotData._saveSamples();
+        }
       },
       child: Container(
           color: widget.plotData.backgroundColor,
@@ -257,16 +264,17 @@ class _PlotPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    const minPoints = 2;
     final series = _plotData.curves;
     if (series.isNotEmpty) {
-      if (series.first._points.length >= _minPoints) {
-        // add each data series
-        for (var state in series) {
-          if (state.displayed) {
-            final path = Path();
-            final points =
-                _plotData._updatePlots ? state._points : state._savedPoints;
-            state.updateTimeSpan(points);
+      // add each data series
+      for (var state in series) {
+        if (state.displayed) {
+          final path = Path();
+          final points =
+              _plotData._updatePlots ? state._points : state._savedPoints;
+          if (points.length > minPoints) {
+            state._updateTimeReference(points);
 
             // initialize the first data point
             final startTime = state._getScaledTime(size.width, points.first.x);

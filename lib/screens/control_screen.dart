@@ -36,8 +36,8 @@ class OscilloscopePlots extends StatelessWidget {
         ["name: ", "value: "].map((e) => DataColumn(label: Text(e))).toList();
     final hostDataModel = Provider.of<HostDataModel>(context, listen: false);
 
-    final oscilloscope = Selector<HostDataModel, double>(
-      selector: (_, selectorModel) => selectorModel.elapsedTime,
+    final oscilloscope = Selector<HostDataModel, int>(
+      selector: (_, selectorModel) => selectorModel.graphUpdateCount,
       builder: (context, _, child) {
         return Oscilloscope(key: key, plotData: hostDataModel.plotData);
       },

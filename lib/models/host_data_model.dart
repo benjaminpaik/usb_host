@@ -13,47 +13,44 @@ import '../protocol/usb_protocol.dart';
 const hostCommandMax = 1000;
 const hostCommandMin = -1000;
 
-const _textUpdateInterval = 250;
-const _plotUpdateInterval = 50;
-const _timeInterval = 5.0;
-const _maxDataPoints = ((_timeInterval * 1000) / _plotUpdateInterval);
+const _textUpdateIntervalMs = 250;
+const _plotUpdateIntervalMs = 50;
+const _plotTimeSpan = 5.0;
+const _maxDataPoints = (_plotTimeSpan * 1000 / _plotUpdateIntervalMs);
 
 class HostDataModel extends ChangeNotifier {
   String? _userMessage;
-  double _elapsedTime = 0;
-  bool _haltTelemetry = true;
   bool _saveByteFile = false;
   int _startTime = 0,
       _graphUpdateCount = 0,
       _textUpdateCount = 0,
+      _statusPrevious = -1,
       _hostCommand = 0;
 
   final usb = UsbApi();
   var configData = ConfigData();
 
-  var plotData = PlotData([],
-      maxSamples: _maxDataPoints.toInt(),
-      ySegments: 8,
-      backgroundColor: Colors.black);
+  var plotData = PlotData([], ySegments: 8, backgroundColor: Colors.black);
 
   HostDataModel() {
     // initialize the start time and start the timer
     _startTime = DateTime.now().millisecondsSinceEpoch;
     Timer.periodic(
-        const Duration(milliseconds: _plotUpdateInterval), _timerCallback);
+        const Duration(milliseconds: _plotUpdateIntervalMs), _timerCallback);
   }
 
   void _timerCallback(Timer t) {
-    if (!_haltTelemetry) {
+    if (usb.isRunning && UsbParse.getCommandMode(usb) < UsbParse.readParameters) {
       final currentTime = DateTime.now().millisecondsSinceEpoch;
-      _elapsedTime = (currentTime - _startTime).toDouble() / 1000.0;
+      final elapsedTime = (currentTime - _startTime).toDouble() / 1000.0;
       for (int i = 0; i < plotData.curves.length; i++) {
         configData.telemetry[i].setBitValue(UsbParse.getData32(usb, i));
         plotData.curves[i].value = configData.telemetry[i].value;
+        plotData.curves[i].updateTimeScaling(_maxDataPoints.toInt(), _plotTimeSpan);
       }
-      plotData.updateSamples(_elapsedTime);
-      if ((_graphUpdateCount++) % (_textUpdateInterval / _plotUpdateInterval) ==
-          0) {
+      plotData.updateSamples(elapsedTime);
+      if ((_graphUpdateCount++) %
+          (_textUpdateIntervalMs / _plotUpdateIntervalMs) == 0) {
         ++_textUpdateCount;
       }
       notifyListeners();
@@ -65,8 +62,8 @@ class HostDataModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  double get elapsedTime {
-    return _elapsedTime;
+  int get graphUpdateCount {
+    return _graphUpdateCount;
   }
 
   int get textUpdateCount {
@@ -84,16 +81,29 @@ class HostDataModel extends ChangeNotifier {
 
   set statusState(String? state) {
     if (state != null) {
-      final stateNames = configData.telemetry.map((e) => e.name);
-      if (stateNames.contains(state)) {
-        configData.status.stateName = state;
+      for(int i = 0; i < configData.telemetry.length; i++) {
+        if(state == configData.telemetry[i].name) {
+          configData.status.stateName = state;
+          configData.status.stateIndex = i;
+        }
       }
       notifyListeners();
     }
   }
 
-  String? get statusState {
+  String get statusState {
     return configData.status.stateName;
+  }
+
+  bool get statusValue {
+    bool changed = false;
+    if(configData.telemetry.isNotEmpty) {
+      final status = configData.telemetry[configData.status.stateIndex].value.toInt();
+      changed = (status != _statusPrevious);
+      configData.status.value = status;
+      _statusPrevious = status;
+    }
+    return changed;
   }
 
   Future<bool> usbConnect() async {
@@ -105,6 +115,8 @@ class HostDataModel extends ChangeNotifier {
         for (var parameter in configData.parameter) {
           parameter.connectedValue = parameter.currentValue;
         }
+        _startTime = DateTime.now().millisecondsSinceEpoch;
+        plotData.resetSamples();
         _userMessage = Message.info.connected;
       } else {
         usb.closePort();
@@ -175,7 +187,6 @@ class HostDataModel extends ChangeNotifier {
   Future<int> getNumParameters() async {
     int deviceParameterLength = -1;
     if (usb.isRunning) {
-      _haltTelemetry = true;
 
       UsbParse.setCommandMode(usb, UsbParse.readParameters);
       UsbParse.setData32(usb, 0, UsbParse.parameterTableIndex);
@@ -193,7 +204,6 @@ class HostDataModel extends ChangeNotifier {
 
       UsbParse.setCommandMode(usb, UsbParse.nullMode);
       usb.sendPacket();
-      _haltTelemetry = false;
     }
     return deviceParameterLength;
   }
@@ -201,7 +211,6 @@ class HostDataModel extends ChangeNotifier {
   Future<bool> getParameters() async {
     bool success = false;
     if (usb.isRunning) {
-      _haltTelemetry = true;
       final parameters = configData.parameter;
       int parametersPerRx = UsbParse.maxStates - 1;
       int totalTransfers = (parameters.length / parametersPerRx).ceil();
@@ -232,7 +241,6 @@ class HostDataModel extends ChangeNotifier {
       }
       UsbParse.setCommandMode(usb, UsbParse.nullMode);
       usb.sendPacket();
-      _haltTelemetry = false;
     }
     return success;
   }
@@ -241,7 +249,6 @@ class HostDataModel extends ChangeNotifier {
     bool success = false;
     _userMessage = Message.error.parameterWrite;
     if (usb.isRunning) {
-      _haltTelemetry = true;
       final parameters = configData.parameter;
       int parametersPerTx = UsbParse.maxStates - 1;
       int totalTransfers = (parameters.length / parametersPerTx).ceil();
@@ -278,7 +285,6 @@ class HostDataModel extends ChangeNotifier {
             _userMessage = Message.error.parameterUpdate(parameterMismatch);
           }
         }
-        _haltTelemetry = false;
       });
     }
     return success;
@@ -288,7 +294,6 @@ class HostDataModel extends ChangeNotifier {
     _userMessage = null;
     bool success = false, nullComplete = false;
     if (usb.isRunning) {
-      _haltTelemetry = true;
       UsbParse.setCommandMode(usb, UsbParse.nullMode);
       usb.sendPacket();
       usb.startWatchdog(parameterTimeout);
@@ -322,7 +327,6 @@ class HostDataModel extends ChangeNotifier {
 
       UsbParse.setCommandMode(usb, UsbParse.nullMode);
       usb.sendPacket();
-      _haltTelemetry = false;
     }
     return success;
   }
@@ -331,7 +335,6 @@ class HostDataModel extends ChangeNotifier {
     _userMessage = null;
     bool success = false, nullComplete = false;
     if (usb.isRunning) {
-      _haltTelemetry = true;
       UsbParse.setCommandMode(usb, UsbParse.nullMode);
       usb.sendPacket();
       usb.startWatchdog(parameterTimeout);
