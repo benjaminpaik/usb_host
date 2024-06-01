@@ -159,7 +159,6 @@ class PlotCurve {
   void _resetSamples() {
     _points.clear();
   }
-
 }
 
 class Oscilloscope extends StatefulWidget {
@@ -178,10 +177,9 @@ class OscilloscopeState extends State<Oscilloscope>
     return GestureDetector(
       onTapDown: (TapDownDetails _) {
         widget.plotData._updatePlots = !widget.plotData._updatePlots;
-        if(widget.plotData._updatePlots) {
+        if (widget.plotData._updatePlots) {
           widget.plotData.resetSamples();
-        }
-        else {
+        } else {
           widget.plotData._saveSamples();
         }
       },

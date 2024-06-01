@@ -20,8 +20,8 @@ class _Message extends StatelessWidget {
   }
 }
 
-void displayMessage(BuildContext context, String? text) {
-  if(text != null && text.isNotEmpty) {
+void displayMessage(BuildContext context, String text) {
+  if(text.isNotEmpty) {
     showDialog(
       context: context,
       builder: (_) => _Message(text),

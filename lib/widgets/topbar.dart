@@ -1,9 +1,11 @@
 import 'package:flutter/services.dart';
-import 'package:usb_host/misc/file_utilities.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:usb_host/models/file_model.dart';
+import 'package:usb_host/models/usb_model.dart';
 
-import '../models/host_data_model.dart';
+import '../misc/file_utilities.dart';
+import '../models/telemetry_model.dart';
 import '../models/parameter_table_model.dart';
 import 'message_widget.dart';
 
@@ -15,18 +17,20 @@ class TopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hostDataModel = Provider.of<HostDataModel>(context, listen: false);
+    final fileModel = Provider.of<FileModel>(context, listen: false);
+    final telemetryModel = Provider.of<TelemetryModel>(context, listen: false);
     final parameterTableModel =
     Provider.of<ParameterTableModel>(context, listen: false);
+    final usbModel = Provider.of<UsbModel>(context, listen: false);
 
     final openFileMenuItem = MenuItemButton(
         onPressed: () {
-          hostDataModel.openConfigFile(() {
-            if (hostDataModel.configData.initialized) {
-              parameterTableModel
-                  .initNumParameters(hostDataModel.configData.parameter.length);
+          fileModel.openConfigFile((bool success) {
+            if (success) {
+              telemetryModel.updatePlotDataFromConfig();
+              parameterTableModel.initRows();
             }
-            displayMessage(context, hostDataModel.userMessage);
+            displayMessage(context, fileModel.userMessage);
           });
         },
         shortcut: const SingleActivator(LogicalKeyboardKey.keyO, control: true),
@@ -34,14 +38,11 @@ class TopBar extends StatelessWidget {
 
     final saveFileMenuItem = MenuItemButton(
       onPressed: () {
-        if (hostDataModel.configData.telemetry.isNotEmpty) {
-          hostDataModel.saveFile(generateConfigFile(hostDataModel.configData));
-        }
+        fileModel.saveConfigFile();
       },
       shortcut: const SingleActivator(LogicalKeyboardKey.keyS, control: true),
-      child: Selector<HostDataModel, bool>(
-        selector: (_, selectorModel) =>
-        selectorModel.configData.telemetry.isNotEmpty,
+      child: Selector<TelemetryModel, bool>(
+        selector: (_, telemetryLoaded) => telemetryModel.telemetry.isNotEmpty,
         builder: (context, fileLoaded, child) {
           return Text(
             "save file",
@@ -55,13 +56,13 @@ class TopBar extends StatelessWidget {
 
     final createDataFileMenuItem = MenuItemButton(
       onPressed: () {
-        if (hostDataModel.usb.isRunning) {
-          hostDataModel.createDataFile();
+        if (usbModel.isRunning) {
+          fileModel.createDataFile();
         }
       },
       shortcut: const SingleActivator(LogicalKeyboardKey.keyD, control: true),
-      child: Selector<HostDataModel, bool>(
-        selector: (_, selectorModel) => selectorModel.usb.isRunning,
+      child: Selector<UsbModel, bool>(
+        selector: (_, usbModel) => usbModel.isRunning,
         builder: (context, running, child) {
           return Text(
             "create data file",
@@ -76,21 +77,21 @@ class TopBar extends StatelessWidget {
     final parseDataMenuItem = MenuItemButton(
         child: const Text("parse data"),
         onPressed: () {
-          hostDataModel.parseDataFile(
-              true, () => displayMessage(context, hostDataModel.userMessage));
+          fileModel.parseDataFile(
+              true, () => displayMessage(context, fileModel.userMessage));
         });
 
     final saveByteFileMenuItem = MenuItemButton(
       child: Row(
         children: [
           const Text("save byte file"),
-          Selector<HostDataModel, bool>(
-            selector: (_, selectorModel) => selectorModel.saveByteFile,
+          Selector<TelemetryModel, bool>(
+            selector: (_, selectorModel) => fileModel.saveByteFile,
             builder: (context, saveByteFile, child) {
               return Checkbox(
-                  value: hostDataModel.saveByteFile,
+                  value: fileModel.saveByteFile,
                   onChanged: (bool? value) {
-                    hostDataModel.saveByteFile = value ?? false;
+                    fileModel.saveByteFile = value ?? false;
                   });
             },
           ),
@@ -101,14 +102,12 @@ class TopBar extends StatelessWidget {
 
     final createHeaderMenuItem = MenuItemButton(
       onPressed: () {
-        if (hostDataModel.configData.telemetry.isNotEmpty) {
-          hostDataModel.saveFile(generateHeaderFile(hostDataModel.configData));
-        }
+        fileModel.saveHeaderFile();
       },
       shortcut: const SingleActivator(LogicalKeyboardKey.keyH, control: true),
-      child: Selector<HostDataModel, bool>(
+      child: Selector<TelemetryModel, bool>(
         selector: (_, selectorModel) =>
-        selectorModel.configData.telemetry.isNotEmpty,
+        selectorModel.telemetry.isNotEmpty,
         builder: (context, fileLoaded, child) {
           return Text(
             "create header",
@@ -122,9 +121,9 @@ class TopBar extends StatelessWidget {
 
     final programTargetMenuItem = MenuItemButton(
       onPressed: () {
-        hostDataModel.initBootloader().then((_) {
-          displayMessage(context, hostDataModel.userMessage);
-          hostDataModel.usbConnect();
+        usbModel.initBootloader().then((_) {
+          displayMessage(context, usbModel.userMessage);
+          usbModel.usbConnect();
         });
       },
       shortcut: const SingleActivator(LogicalKeyboardKey.keyP, control: true),
@@ -144,13 +143,13 @@ class TopBar extends StatelessWidget {
       programTargetMenuItem,
     ];
 
-    final recordButton = Selector<HostDataModel, RecordState>(
-      selector: (_, selectorModel) => selectorModel.usb.recordState,
+    final recordButton = Selector<FileModel, RecordState>(
+      selector: (_, selectorModel) => fileModel.recordState,
       builder: (context, recordState, child) {
         return IconButton(
             onPressed: () {
-              hostDataModel.recordButtonEvent(() {
-                displayMessage(context, hostDataModel.userMessage);
+              fileModel.recordButtonEvent(() {
+                displayMessage(context, fileModel.userMessage);
               });
             },
             icon: recordState.icon);
@@ -163,18 +162,19 @@ class TopBar extends StatelessWidget {
       child: SizedBox(
         width: 120.0,
         child: ElevatedButton(
-          child: Selector<HostDataModel, bool>(
-            selector: (_, selectorModel) => selectorModel.usb.isRunning,
+          child: Selector<UsbModel, bool>(
+            selector: (_, usbModel) => usbModel.isRunning,
             builder: (context, isRunning, child) {
               return Text(isRunning ? "Disconnect" : "Connect");
             },
           ),
           onPressed: () {
-            hostDataModel.usbConnect().then((success) {
+            usbModel.usbConnect().then((success) {
               if (success) {
                 parameterTableModel.updateTable();
+                telemetryModel.startPlots();
               }
-              displayMessage(context, hostDataModel.userMessage);
+              displayMessage(context, usbModel.userMessage);
             });
           },
         ),

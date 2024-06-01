@@ -12,7 +12,6 @@ enum ConfigDataKeys {
 }
 
 class ConfigData {
-  bool initialized = false;
   int _commandMax = 1000,
       _commandMin = -1000;
   List<String> modes = List.empty(growable: true);
@@ -35,6 +34,24 @@ class ConfigData {
 
   int get commandMin {
     return _commandMin;
+  }
+
+  void updateFromNewConfig(ConfigData newConfig) {
+    _commandMax = newConfig.commandMax;
+    _commandMin = newConfig.commandMin;
+    modes = newConfig.modes;
+    telemetry = newConfig.telemetry;
+    status = newConfig.status;
+
+    final oldParameters = parameter;
+    parameter = newConfig.parameter;
+
+    if (parameter.isNotEmpty && (parameter.length == oldParameters.length)) {
+      for (int i = 0; i < parameter.length; i++) {
+        parameter[i].deviceValue = oldParameters[i].deviceValue;
+        parameter[i].connectedValue = oldParameters[i].connectedValue;
+      }
+    }
   }
 
   Map<ConfigDataKeys, dynamic> toMap() {

@@ -1,6 +1,7 @@
-import 'package:usb_host/models/host_data_model.dart';
+import 'package:usb_host/models/telemetry_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:usb_host/models/usb_model.dart';
 import '../definitions.dart';
 import '../widgets/oscilloscope_widget.dart';
 
@@ -16,7 +17,7 @@ class ControlPage extends StatelessWidget {
       children: [
         Expanded(flex: 20, child: OscilloscopePlots()),
         const Spacer(),
-        const Expanded(flex: 2, child: CmdInput()),
+        const Expanded(flex: 3, child: CmdInput()),
         const Spacer(),
         Expanded(flex: 3, child: CmdButtons()),
         const Spacer(),
@@ -34,40 +35,40 @@ class OscilloscopePlots extends StatelessWidget {
   Widget build(BuildContext context) {
     final dataHeaders =
         ["name: ", "value: "].map((e) => DataColumn(label: Text(e))).toList();
-    final hostDataModel = Provider.of<HostDataModel>(context, listen: false);
+    final telemetryModel = Provider.of<TelemetryModel>(context, listen: false);
 
-    final oscilloscope = Selector<HostDataModel, int>(
+    final oscilloscope = Selector<TelemetryModel, int>(
       selector: (_, selectorModel) => selectorModel.graphUpdateCount,
       builder: (context, _, child) {
-        return Oscilloscope(key: key, plotData: hostDataModel.plotData);
+        return Oscilloscope(key: key, plotData: telemetryModel.plotData);
       },
     );
 
-    final valueList = Selector<HostDataModel, int>(
+    final valueList = Selector<TelemetryModel, int>(
       selector: (_, selectorModel) => selectorModel.textUpdateCount,
       builder: (context, _, child) {
-        final telemetry = hostDataModel.configData.telemetry;
-        if(hostDataModel.plotData.updatePlots) {
+        final telemetry = telemetryModel.telemetry;
+        if (telemetryModel.plotData.updatePlots) {
           for (var element in telemetry) {
             element.updateScaledValue();
           }
         }
         final dataRows = List<DataRow>.generate(telemetry.length, (index) {
           return DataRow(
-            color: MaterialStateProperty.all(telemetry[index].color),
+            color: WidgetStateProperty.all(telemetry[index].color),
             selected: telemetry[index].displayed,
             onSelectChanged: (selected) {
               telemetry[index].displayed = selected ?? false;
               if (telemetry[index].displayed) {
-                hostDataModel.plotData.selectedState = telemetry[index].name;
+                telemetryModel.selectedState = telemetry[index].name;
               } else {
                 // set the selected oscilloscope state to the first state displayed
-                hostDataModel.plotData.selectedState = telemetry
+                telemetryModel.selectedState = telemetry
                     .firstWhere((element) => element.displayed,
                         orElse: () => telemetry.first)
                     .name;
               }
-              hostDataModel.updateDisplaySelection();
+              telemetryModel.updateDisplaySelection();
             },
             cells: [
               DataCell(SizedBox(
@@ -112,16 +113,16 @@ class CmdInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hostDataModel = Provider.of<HostDataModel>(context, listen: false);
+    final usbModel = Provider.of<UsbModel>(context, listen: false);
     final TextEditingController cmdTextController =
         TextEditingController(text: 0.toString());
 
-    final cmdScrollBar = Selector<HostDataModel, int>(
-        selector: (_, selectorModel) => selectorModel.command,
+    final cmdScrollBar = Selector<UsbModel, int>(
+        selector: (_, usbModel) => usbModel.command,
         builder: (context, _, child) {
           return Slider(
               onChanged: (value) {
-                hostDataModel.command = value.round();
+                usbModel.command = value.round();
               },
               onChangeEnd: (value) {
                 cmdTextController.text = value.round().toString();
@@ -129,22 +130,22 @@ class CmdInput extends StatelessWidget {
               min: hostCommandMin.toDouble(),
               max: hostCommandMax.toDouble(),
               divisions: (hostCommandMax - hostCommandMin),
-              value: hostDataModel.command.toDouble(),
-              label: hostDataModel.command.toString());
+              value: usbModel.command.toDouble(),
+              label: usbModel.command.toString());
         });
 
     final cmdTextField = Row(
       children: [
         const Spacer(flex: 3),
         Expanded(
-          child: Selector<HostDataModel, int>(
-            selector: (_, selectorModel) => selectorModel.command,
+          child: Selector<UsbModel, int>(
+            selector: (_, usbModel) => usbModel.command,
             builder: (context, _, child) {
               return TextField(
                 controller: cmdTextController,
                 onSubmitted: (text) {
                   int? value = int.tryParse(text);
-                  if (value != null) hostDataModel.command = value;
+                  if (value != null) usbModel.command = value;
                 },
               );
             },
@@ -156,8 +157,14 @@ class CmdInput extends StatelessWidget {
 
     return Column(
       children: [
-        Expanded(child: cmdScrollBar),
-        Expanded(child: cmdTextField),
+        Expanded(
+            flex: 1,
+            child: cmdScrollBar
+        ),
+        Expanded(
+          flex: 3,
+          child: cmdTextField,
+        ),
       ],
     );
   }
@@ -171,10 +178,10 @@ class CmdButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hostDataModel = Provider.of<HostDataModel>(context, listen: false);
+    final usbModel = Provider.of<UsbModel>(context, listen: false);
 
-    final modeButtonList = Selector<HostDataModel, List<String>>(
-      selector: (_, selectorModel) => selectorModel.configData.modes,
+    final modeButtonList = Selector<TelemetryModel, List<String>>(
+      selector: (_, selectorModel) => selectorModel.modes,
       builder: (context, modes, child) {
         return GridView.extent(
           childAspectRatio: buttonWidth / buttonHeight,
@@ -188,15 +195,15 @@ class CmdButtons extends StatelessWidget {
               (index) => ElevatedButton(
                     child: Center(child: Text(modes[index])),
                     onPressed: () {
-                      hostDataModel.mode = index + 1;
+                      usbModel.mode = index + 1;
                     },
                   )),
         );
       },
     );
 
-    return Selector<HostDataModel, int>(
-      selector: (_, selectorModel) => selectorModel.command,
+    return Selector<UsbModel, int>(
+      selector: (_, usbModel) => usbModel.command,
       builder: (context, hostCommand, child) {
         return SingleChildScrollView(
           controller: buttonScrollController,

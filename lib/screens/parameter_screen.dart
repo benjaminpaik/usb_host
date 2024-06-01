@@ -1,9 +1,8 @@
-import 'package:usb_host/models/host_data_model.dart';
+import 'package:usb_host/models/usb_model.dart';
 import 'package:usb_host/widgets/message_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../definitions.dart';
-import '../misc/parameter.dart';
 import 'package:usb_host/models/parameter_table_model.dart';
 
 const parameterIndexHeader = "index";
@@ -27,9 +26,9 @@ class ParameterPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final usbModel = Provider.of<UsbModel>(context, listen: false);
     final parameterTableModel =
-    Provider.of<ParameterTableModel>(context, listen: false);
-    final hostDataModel = Provider.of<HostDataModel>(context, listen: false);
+        Provider.of<ParameterTableModel>(context, listen: false);
 
     return Column(
       children: [
@@ -48,11 +47,11 @@ class ParameterPage extends StatelessWidget {
               ElevatedButton(
                 child: const Text("get parameters"),
                 onPressed: () {
-                  hostDataModel.getParametersUserSequence().then((success) {
+                  usbModel.getParametersUserSequence().then((success) {
                     if (success) {
                       parameterTableModel.updateTable();
                     }
-                    displayMessage(context, hostDataModel.userMessage);
+                    displayMessage(context, usbModel.userMessage);
                   });
                 },
               ),
@@ -60,8 +59,8 @@ class ParameterPage extends StatelessWidget {
               ElevatedButton(
                 child: const Text("send parameters"),
                 onPressed: () {
-                  hostDataModel.sendParameters().then((_) {
-                    displayMessage(context, hostDataModel.userMessage);
+                  usbModel.sendParameters().then((_) {
+                    displayMessage(context, usbModel.userMessage);
                   });
                 },
               ),
@@ -69,8 +68,8 @@ class ParameterPage extends StatelessWidget {
               ElevatedButton(
                 child: const Text("flash parameters"),
                 onPressed: () {
-                  hostDataModel.flashParameters().then((_) {
-                    displayMessage(context, hostDataModel.userMessage);
+                  usbModel.flashParameters().then((_) {
+                    displayMessage(context, usbModel.userMessage);
                   });
                 },
               ),
@@ -94,61 +93,34 @@ class ParameterTable extends StatelessWidget {
         child: Consumer<ParameterTableModel>(
           builder: (context, length, child) {
             final parameterTableModel =
-            Provider.of<ParameterTableModel>(context, listen: false);
-            final parameters =
-                Provider.of<HostDataModel>(context, listen: false)
-                    .configData
-                    .parameter;
-            final parameterRows = List<DataRow>.generate(parameters.length,
-                    (index) => ParameterRow(context, index: index).row);
+                Provider.of<ParameterTableModel>(context, listen: false);
+            final parameterRows = List<DataRow>.generate(
+                parameterTableModel.numRows,
+                (index) => ParameterRow(context, index: index).row);
             final headers = parameterHeaders
                 .map((e) => DataColumn(
-                label: TextButton(
-                    onPressed: () {
-                      switch (e) {
-                        case (parameterFileHeader):
-                          copyFileParameters(
-                              parameterTableModel, parameters);
-                          parameterTableModel.updateTable();
-                          break;
+                    label: TextButton(
+                        onPressed: () {
+                          switch (e) {
+                            case (parameterFileHeader):
+                              parameterTableModel.copyFileParameters();
+                              break;
 
-                        case (parameterConnectedHeader):
-                          copyConnectedParameters(
-                              parameterTableModel, parameters);
-                          parameterTableModel.updateTable();
-                          break;
+                            case (parameterConnectedHeader):
+                              parameterTableModel.copyConnectedParameters();
+                              break;
 
-                        default:
-                          break;
-                      }
-                    },
-                    child: Text(e))))
+                            default:
+                              break;
+                          }
+                        },
+                        child: Text(e))))
                 .toList();
             return DataTable(columns: headers, rows: parameterRows);
           },
         ),
       ),
     );
-  }
-
-  void copyFileParameters(
-      ParameterTableModel parameterTableModel, List<Parameter> parameters) {
-    for (int i = 0; i < parameters.length; i++) {
-      if (parameterTableModel.rowSelected(i) &&
-          parameters[i].fileValue != null) {
-        parameters[i].currentValue = parameters[i].fileValue;
-      }
-    }
-  }
-
-  void copyConnectedParameters(
-      ParameterTableModel parameterTableModel, List<Parameter> parameters) {
-    for (int i = 0; i < parameters.length; i++) {
-      if (parameterTableModel.rowSelected(i) &&
-          parameters[i].connectedValue != null) {
-        parameters[i].currentValue = parameters[i].connectedValue;
-      }
-    }
   }
 }
 
@@ -158,9 +130,7 @@ class ParameterRow {
 
   ParameterRow(BuildContext context, {Key? key, this.index = -1}) {
     final parameterTableModel =
-    Provider.of<ParameterTableModel>(context, listen: false);
-    final parameters =
-        Provider.of<HostDataModel>(context, listen: false).configData.parameter;
+        Provider.of<ParameterTableModel>(context, listen: false);
 
     row = DataRow(
       cells: [
@@ -168,21 +138,21 @@ class ParameterRow {
           (index >= 0) ? Text(index.toString()) : const Text(""),
         ),
         DataCell(
-          Text(parameters[index].name),
+          Text(parameterTableModel.parameterName(index)),
         ),
         DataCell(
           TextField(
-            controller:
-            TextEditingController(text: parameters[index].currentString),
+            controller: TextEditingController(
+                text: parameterTableModel.getCurrentText(index)),
             style:
-            const TextStyle(fontSize: standardFontSize, color: textColor),
+                const TextStyle(fontSize: standardFontSize, color: textColor),
             onChanged: (text) {
-              parameters[index].setCurrentFromText(text);
+              parameterTableModel.setCurrentText(index, text);
             },
           ),
         ),
-        DataCell(Text(parameters[index].fileString)),
-        DataCell(Text(parameters[index].connectedString)),
+        DataCell(Text(parameterTableModel.getFileText(index))),
+        DataCell(Text(parameterTableModel.getConnectedText(index))),
       ],
       selected: parameterTableModel.rowSelected(index),
       onSelectChanged: (selected) {

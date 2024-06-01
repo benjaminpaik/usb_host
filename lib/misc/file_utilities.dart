@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
@@ -63,6 +64,20 @@ void openConfigFileIsolate(SendPort sendPort) async {
     final contents = await file.readAsString();
     sendPort.send(contents);
   }
+}
+
+Future<void> saveFile(String text) async {
+  final completer = Completer<SendPort>();
+  final receivePort = ReceivePort();
+  receivePort.listen((message) {
+    if (message is SendPort) {
+      completer.complete(message);
+    }
+    receivePort.close();
+  });
+  await Isolate.spawn(saveFileIsolate, receivePort.sendPort);
+  SendPort sendPort = await completer.future;
+  sendPort.send(text);
 }
 
 Future<void> saveFileIsolate(SendPort sendPort) async {
@@ -200,11 +215,18 @@ ConfigData parseConfigFile(String configText) {
   final configData = ConfigData();
   const lineSplitter = LineSplitter();
   final lines = lineSplitter.convert(configText);
-  int index = -1;
+  int index = -1, lineNumber = 0;
 
   for (var line in lines) {
+    lineNumber++;
+    // ignore these lines
+    if (line.trim().isEmpty ||
+        line.trim().startsWith("//") ||
+        line.trim().replaceAll("-", "").isEmpty) {
+      continue;
+    }
     // host settings
-    if (line.contains("=>")) {
+    else if (line.contains("=>")) {
       index = line.indexOf(":") + 1;
       if (index == -1) {
         throw const FormatException("invalid host settings");
@@ -228,8 +250,8 @@ ConfigData parseConfigFile(String configText) {
             .toList();
       }
     }
-    // settings tables
-    else {
+    // telemetry and parameter settings
+    else if (line.contains("||")) {
       String errorMessage = "invalid ";
       final fields = line.split("||");
       try {
@@ -276,24 +298,16 @@ ConfigData parseConfigFile(String configText) {
         throw FormatException(errorMessage);
       }
     }
+    // throw error for unknown lines
+    else {
+      throw FormatException("Error on line $lineNumber");
+    }
   }
 
   for (var element in configData.parameter) {
     element.currentValue = element.fileValue;
   }
   return configData;
-}
-
-ConfigData mergeExistingParameters(ConfigData newConfig, ConfigData oldConfig) {
-  if (newConfig.parameter.isNotEmpty &&
-      newConfig.parameter.length == oldConfig.parameter.length) {
-    for (int i = 0; i < newConfig.parameter.length; i++) {
-      newConfig.parameter[i].deviceValue = oldConfig.parameter[i].deviceValue;
-      newConfig.parameter[i].connectedValue =
-          oldConfig.parameter[i].connectedValue;
-    }
-  }
-  return newConfig;
 }
 
 Telemetry parseTelemetry(String line) {

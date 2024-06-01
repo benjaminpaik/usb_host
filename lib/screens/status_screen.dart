@@ -1,4 +1,4 @@
-import 'package:usb_host/models/host_data_model.dart';
+import 'package:usb_host/models/telemetry_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -27,13 +27,13 @@ class StatusBitList extends StatelessWidget {
   Widget build(BuildContext context) {
     final dataHeaders =
     ["name: ", "value: "].map((e) => DataColumn(label: Text(e))).toList();
-    final hostDataModel = Provider.of<HostDataModel>(context, listen: false);
+    final telemetryModel = Provider.of<TelemetryModel>(context, listen: false);
 
-    final valueList = Selector<HostDataModel, bool>(
-      selector: (_, selectorModel) => selectorModel.statusValue,
+    final valueList = Selector<TelemetryModel, bool>(
+      selector: (_, selectorModel) => selectorModel.statusChanged,
       builder: (context, _, child) {
 
-        final bitStatus = hostDataModel.configData.status;
+        final bitStatus = telemetryModel.statusBits;
 
         final dataRows0 = List<DataRow>.generate(bitStatus.numFields, (index) {
           return DataRow(
