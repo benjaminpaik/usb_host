@@ -3,6 +3,7 @@ import 'dart:isolate';
 import 'package:usb_host/definitions.dart';
 import 'package:usb_host/misc/config_data.dart';
 import 'package:flutter/material.dart';
+import 'package:yaml/yaml.dart';
 
 import '../misc/file_utilities.dart';
 import '../protocol/usb_protocol.dart';
@@ -53,7 +54,8 @@ class FileModel extends ChangeNotifier {
 
     receivePort.listen((message) {
       try {
-        _configData.updateFromNewConfig(parseConfigFile(message));
+        final configMap = loadYaml(message) as Map;
+        _configData.updateFromNewConfig(ConfigData.fromMap(configMap));
         onComplete(true);
       } on Exception catch (e, _) {
         _userMessage = e.toString();

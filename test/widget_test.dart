@@ -21,7 +21,7 @@ void main() {
 
     // test integers
     const testInput2 = "1234567";
-    parameter.type = ParameterType.long;
+    parameter.type = ParameterType.int;
     parameter.setCurrentFromText(testInput2);
     expect(parameter.currentString, testInput2);
   });

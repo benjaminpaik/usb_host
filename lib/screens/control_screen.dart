@@ -56,15 +56,15 @@ class OscilloscopePlots extends StatelessWidget {
         final dataRows = List<DataRow>.generate(telemetry.length, (index) {
           return DataRow(
             color: WidgetStateProperty.all(telemetry[index].color),
-            selected: telemetry[index].displayed,
+            selected: telemetry[index].display,
             onSelectChanged: (selected) {
-              telemetry[index].displayed = selected ?? false;
-              if (telemetry[index].displayed) {
+              telemetry[index].display = selected ?? false;
+              if (telemetry[index].display) {
                 telemetryModel.selectedState = telemetry[index].name;
               } else {
                 // set the selected oscilloscope state to the first state displayed
                 telemetryModel.selectedState = telemetry
-                    .firstWhere((element) => element.displayed,
+                    .firstWhere((element) => element.display,
                         orElse: () => telemetry.first)
                     .name;
               }
@@ -127,9 +127,9 @@ class CmdInput extends StatelessWidget {
               onChangeEnd: (value) {
                 cmdTextController.text = value.round().toString();
               },
-              min: hostCommandMin.toDouble(),
-              max: hostCommandMax.toDouble(),
-              divisions: (hostCommandMax - hostCommandMin),
+              min: usbModel.commandMin.toDouble(),
+              max: usbModel.commandMax.toDouble(),
+              divisions: (usbModel.commandMax - usbModel.commandMin),
               value: usbModel.command.toDouble(),
               label: usbModel.command.toString());
         });

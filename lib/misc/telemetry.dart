@@ -4,36 +4,60 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 enum TelemetryKeys {
-  name,
   value,
+  name,
   max,
   min,
-  ratio,
+  type,
+  scale,
   color,
   display,
 }
 
-enum StatusBitKeys {
-  names,
-  numBits,
-  bitOffset,
-  bitMask,
-  stateName,
-  stateIndex,
-  value,
+enum TelemetryType {
+  int,
+  float,
 }
+
+enum StatusBitKeys {
+  state,
+  fields,
+}
+
+enum StatusFieldKeys {
+  name,
+  bits,
+}
+
+const colorMap = {
+  "red": Colors.red,
+  "black": Colors.black,
+  "grey": Colors.grey,
+  "green": Colors.green,
+  "pink": Colors.pink,
+  "blue": Colors.blue,
+  "white": Colors.white,
+  "yellow": Colors.yellow,
+  "orange": Colors.orange,
+  "purple": Colors.purple,
+  "magenta": Colors.pinkAccent,
+  "cyan": Colors.cyan,
+};
+
+final reverseColorMap = colorMap.map((k, v) => MapEntry(v, k));
 
 class Telemetry {
   final _numberFormatter = NumberFormat("0.####");
   final String _name;
-  final double _max, _min, _range, _ratio;
+  final double _max, _min, _range, _scale;
+  final TelemetryType _type;
   double _value = 0;
   String _scaledValue = "0";
-  bool displayed = false;
+  bool display = false;
   Color color = Colors.black;
 
-  Telemetry(
-      this._name, this._max, this._min, this._ratio, this.color, this.displayed)
+  Telemetry(this._name, this._max, this._min, this._type, this._scale,
+      this.color, this.display)
       : _range = (_max - _min) {
     if (range <= 0) {
       throw const FormatException("invalid range");
@@ -56,12 +80,16 @@ class Telemetry {
     return _range;
   }
 
-  double get ratio {
-    return _ratio;
+  TelemetryType get type {
+    return _type;
+  }
+
+  double get scale {
+    return _scale;
   }
 
   void setBitValue(int bitValue) {
-    if (_ratio == 0.0) {
+    if (_type == TelemetryType.float) {
       final byteData = ByteData(4);
       byteData.setInt32(0, bitValue);
       _value = byteData.getFloat32(0);
@@ -75,37 +103,46 @@ class Telemetry {
   }
 
   void updateScaledValue() {
-    if (_ratio == 0.0) {
-      _scaledValue = _numberFormatter.format(_value);
-    } else {
-      _scaledValue = _numberFormatter.format(_value * _ratio);
-    }
+    _scaledValue = _numberFormatter.format(_value * _scale);
   }
 
   String get scaledValue {
     return _scaledValue;
   }
 
-  Map<TelemetryKeys, dynamic> toMap() {
-    return {
-      TelemetryKeys.name: name,
-      TelemetryKeys.value: _value,
-      TelemetryKeys.max: _max,
-      TelemetryKeys.min: _min,
-      TelemetryKeys.ratio: ratio,
-      TelemetryKeys.color: color,
-      TelemetryKeys.display: displayed,
-    };
+  String get typeString {
+    return (type == TelemetryType.float)
+        ? TelemetryType.float.name
+        : TelemetryType.int.name;
+  }
+
+  String get colorString {
+    final result = reverseColorMap[color];
+    return result ?? colorMap.keys.first;
   }
 
   static Telemetry fromMap(Map<TelemetryKeys, dynamic> map) {
-    return Telemetry(map[TelemetryKeys.name], map[TelemetryKeys.max], map[TelemetryKeys.min], map[TelemetryKeys.ratio],
-        map[TelemetryKeys.color], map[TelemetryKeys.display]);
-  }
 
-  @override
-  String toString() {
-    return toMap().toString();
+    final type = map[TelemetryKeys.type];
+    if (type.runtimeType == String) {
+      map[TelemetryKeys.type] = (type.contains(TelemetryType.float.name))
+          ? TelemetryType.float
+          : TelemetryType.int;
+    }
+
+    final color = map[TelemetryKeys.color];
+    if (color.runtimeType == String) {
+      map[TelemetryKeys.color] = colorMap[color] ?? Colors.black;
+    }
+
+    return Telemetry(
+        map[TelemetryKeys.name],
+        map[TelemetryKeys.max],
+        map[TelemetryKeys.min],
+        map[TelemetryKeys.type],
+        map[TelemetryKeys.scale],
+        map[TelemetryKeys.color],
+        map[TelemetryKeys.display]);
   }
 }
 
@@ -173,46 +210,47 @@ class BitStatus {
     }
   }
 
-  Map<StatusBitKeys, dynamic> toMap() {
+  Map<String, dynamic> toMap() {
+    final statusFieldsMap = List<Map<String, dynamic>>.generate(
+        numFields,
+        (int index) => {
+              StatusFieldKeys.name.name: fieldName(index),
+              StatusFieldKeys.bits.name: numBits(index),
+            });
+
     return {
-      StatusBitKeys.names: _names,
-      StatusBitKeys.numBits: _numBits,
-      StatusBitKeys.bitOffset: _bitOffset,
-      StatusBitKeys.bitMask: _bitMask,
-      StatusBitKeys.stateName: stateName,
-      StatusBitKeys.stateIndex: stateIndex,
-      StatusBitKeys.value: _value,
+      StatusBitKeys.state.name: stateName,
+      StatusBitKeys.fields.name: statusFieldsMap,
     };
   }
 
-  static BitStatus fromMap(Map<StatusBitKeys, dynamic> map) {
-    final bitStatus = BitStatus();
+  static BitStatus fromMap(Map<String, dynamic> map) {
+    final status = BitStatus();
 
-    (map[StatusBitKeys.names] as Map<StatusBitKeys, String>).forEach((key, value) {
-      bitStatus._names.add(value);
-    });
+    var statusFields = <Map>[];
+    // parse status settings
+    try {
+      statusFields = List<Map>.from(map[StatusBitKeys.fields.name]);
+    } catch (e) {
+      throw const FormatException("invalid status settings");
+    }
 
-    (map[StatusBitKeys.numBits] as Map<StatusBitKeys, int>).forEach((key, value) {
-      bitStatus._numBits.add(value);
-    });
+    try {
+      status.stateName = map[StatusBitKeys.state.name];
+    } catch (e) {
+      throw const FormatException("invalid status state");
+    }
 
-    (map[StatusBitKeys.bitOffset] as Map<StatusBitKeys, int>).forEach((key, value) {
-      bitStatus._bitOffset.add(value);
-    });
-
-    (map[StatusBitKeys.bitMask] as Map<StatusBitKeys, int>).forEach((key, value) {
-      bitStatus._bitMask.add(value);
-    });
-
-    bitStatus.stateName = map[StatusBitKeys.stateName];
-    bitStatus.stateIndex = map[StatusBitKeys.stateIndex];
-    bitStatus._value = map[StatusBitKeys.value];
-
-    return bitStatus;
-  }
-
-  @override
-  String toString() {
-    return toMap().toString();
+    for (int i = 0; i < statusFields.length; i++) {
+      try {
+        final statusFieldMap = statusFields[i];
+        final statusFieldName = statusFieldMap[StatusFieldKeys.name.name];
+        final statusFieldBits = statusFieldMap[StatusFieldKeys.bits.name];
+        status.createField(statusFieldName, statusFieldBits);
+      } catch (e) {
+        throw FormatException("invalid status field at index $i");
+      }
+    }
+    return status;
   }
 }

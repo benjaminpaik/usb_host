@@ -3,13 +3,14 @@ import 'dart:typed_data';
 import 'package:intl/intl.dart';
 
 enum ParameterType {
-  long,
+  int,
   float,
 }
 
 enum ParameterKeys {
   name,
   type,
+  value,
   currentValue,
   fileValue,
   connectedValue,
@@ -18,7 +19,7 @@ enum ParameterKeys {
 
 class Parameter {
   String name = "";
-  ParameterType type = ParameterType.long;
+  ParameterType type = ParameterType.int;
   int? currentValue;
   int? fileValue;
   int? connectedValue;
@@ -75,9 +76,39 @@ class Parameter {
       ..deviceValue = map[ParameterKeys.deviceValue];
   }
 
-  @override
-  String toString() {
-    return toMap().toString();
+  static Parameter fromConfigMap(Map map) {
+    final type = map[ParameterKeys.type];
+    if (type.runtimeType == String) {
+      map[ParameterKeys.type] = (type.contains(ParameterType.float.name))
+          ? ParameterType.float
+          : ParameterType.int;
+    }
+
+    final parameter = Parameter()
+      ..name = map[ParameterKeys.name]
+      ..type = map[ParameterKeys.type];
+
+    if (map[ParameterKeys.currentValue] != null) {
+      parameter.currentValue = map[ParameterKeys.currentValue];
+      parameter.fileValue = map[ParameterKeys.fileValue];
+      parameter.connectedValue = map[ParameterKeys.connectedValue];
+    } else {
+      final byteData = ByteData(4);
+      final value = map[ParameterKeys.value];
+
+      if (map[ParameterKeys.type] == ParameterType.float &&
+          value.runtimeType == double) {
+        byteData.setFloat32(0, value);
+      } else if (map[ParameterKeys.type] == ParameterType.int &&
+          value.runtimeType == int) {
+        byteData.setInt32(0, value);
+      } else {
+        throw const FormatException();
+      }
+      parameter.fileValue = byteData.getInt32(0);
+      parameter.currentValue = parameter.fileValue;
+    }
+    return parameter;
   }
 }
 
@@ -86,12 +117,13 @@ String parameterToString(ParameterType type, int? value) {
   if (value != null) {
     if (type == ParameterType.float) {
       byteData.setInt32(0, value);
-      final floatRound = double.parse(byteData.getFloat32(0).toStringAsPrecision(7));
+      final floatRound =
+          double.parse(byteData.getFloat32(0).toStringAsPrecision(7));
 
-      if (floatRound == 0.0 || (floatRound.abs() < 10000 && floatRound.abs() > 0.001)) {
+      if (floatRound == 0.0 ||
+          (floatRound.abs() < 10000 && floatRound.abs() > 0.001)) {
         return NumberFormat("0.0#####").format(floatRound);
-      }
-      else {
+      } else {
         return NumberFormat("0.0###E0##").format(floatRound);
       }
     } else {
