@@ -46,6 +46,14 @@ class UsbModel extends ChangeNotifier {
     return _command;
   }
 
+  int get commandMax {
+    return _configData.commandMax;
+  }
+
+  int get commandMin {
+    return _configData.commandMin;
+  }
+
   set command(int value) {
     _command = value;
     UsbParse.setData32(_usb, _command, UsbParse.commandValueIndex);

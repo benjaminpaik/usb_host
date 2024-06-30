@@ -33,6 +33,7 @@ dependencies:
   file_picker: ^4.6.1
   libusb:  ^0.3.23+2
   intl: ^0.17.0
+  yaml: ^3.1.2
 
 
   # The following adds the Cupertino Icons font to your application.

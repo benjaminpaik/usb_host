@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:intl/intl.dart';
 
 enum ParameterType {
-  long,
+  int,
   float,
 }
 
@@ -18,7 +18,7 @@ enum ParameterKeys {
 
 class Parameter {
   String name = "";
-  ParameterType type = ParameterType.long;
+  ParameterType type = ParameterType.int;
   int? currentValue;
   int? fileValue;
   int? connectedValue;

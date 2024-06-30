@@ -48,7 +48,6 @@ class UsbParse {
   static const timestampIndex = 1;
   static const dataStartIndex = 4;
 
-  static const stateRequest = 0xFFFF;
   static const checksumBytes = 2;
   static const maxStates = 15;
 

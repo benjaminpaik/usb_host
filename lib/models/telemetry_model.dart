@@ -7,9 +7,6 @@ import 'package:usb_host/widgets/oscilloscope_widget.dart';
 import '../protocol/usb_parse.dart';
 import '../protocol/usb_protocol.dart';
 
-const hostCommandMax = 1000;
-const hostCommandMin = -1000;
-
 const _textUpdateIntervalMs = 250;
 const _plotUpdateIntervalMs = 50;
 const _plotTimeSpan = 5.0;
@@ -63,7 +60,7 @@ class TelemetryModel extends ChangeNotifier {
             (i) => PlotCurve(
             telemetry[i].name, telemetry[i].max, telemetry[i].min,
             color: telemetry[i].color)
-          ..displayed = telemetry[i].displayed);
+          ..displayed = telemetry[i].display);
     // set the selected oscilloscope state to the first state displayed
     _plotData.selectedState = _plotData.curves
         .firstWhere((element) => element.displayed,
@@ -134,7 +131,7 @@ class TelemetryModel extends ChangeNotifier {
 
   void updateDisplaySelection() {
     for (int i = 0; i < _configData.telemetry.length; i++) {
-      _plotData.curves[i].displayed = _configData.telemetry[i].displayed;
+      _plotData.curves[i].displayed = _configData.telemetry[i].display;
     }
     notifyListeners();
   }
