@@ -41,6 +41,7 @@ class FileModel extends ChangeNotifier {
       default:
         break;
     }
+    notifyListeners();
   }
 
   RecordState get recordState {

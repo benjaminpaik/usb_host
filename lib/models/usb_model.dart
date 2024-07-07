@@ -28,7 +28,6 @@ class UsbModel extends ChangeNotifier {
         _userMessage = Message.info.connected;
       } else {
         _usb.closePort();
-        _userMessage = Message.error.connect;
       }
     } else {
       _usb.closePort();

@@ -9,6 +9,7 @@ import 'package:usb_host/misc/file_utilities.dart';
 import 'usb_parse.dart';
 
 const _connectTimeout = 1000;
+final libusb = Libusb(loadLibrary());
 
 enum ProtocolKeys {
   running,
@@ -138,7 +139,6 @@ class _UsbProtocol {
   final Pointer<Uint8> _rxBuffer = malloc<Uint8>(UsbParse.maxRxBufferSize);
   final Pointer<Int32> _rxLength = malloc<Int32>(1);
 
-  final libusb = Libusb(loadLibrary());
   Pointer<libusb_device_handle>? devHandle = nullptr;
 
   _UsbProtocol() {
