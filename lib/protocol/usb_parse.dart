@@ -1,6 +1,7 @@
 import 'dart:typed_data';
-import 'package:libusb/libusb32.dart';
 import 'package:usb_host/protocol/usb_protocol.dart';
+
+import 'libusb32.dart';
 
 class UsbParse {
   static const vendorId = 1155;

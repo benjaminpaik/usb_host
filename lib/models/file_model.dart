@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:isolate';
+import 'package:file_picker/file_picker.dart';
 import 'package:usb_host/definitions.dart';
 import 'package:usb_host/misc/config_data.dart';
 import 'package:flutter/material.dart';
@@ -49,21 +51,23 @@ class FileModel extends ChangeNotifier {
   }
 
   Future<void> openConfigFile(void Function(bool success) onComplete) async {
-    final receivePort = ReceivePort();
-    await Isolate.spawn(openConfigFileIsolate, receivePort.sendPort);
+
+    final selectedFile =
+    await FilePicker.platform.pickFiles(dialogTitle: 'open config');
     _userMessage = "";
 
-    receivePort.listen((message) {
+    if(selectedFile != null) {
       try {
-        final configMap = loadYaml(message) as Map;
+        final file = File(selectedFile.files.single.path!);
+        final contents = await file.readAsString();
+        final configMap = loadYaml(contents) as Map;
         _configData.updateFromNewConfig(ConfigData.fromMap(configMap));
         onComplete(true);
       } on Exception catch (e, _) {
         _userMessage = e.toString();
         onComplete(false);
       }
-      receivePort.close();
-    });
+    }
   }
 
   void saveConfigFile() {

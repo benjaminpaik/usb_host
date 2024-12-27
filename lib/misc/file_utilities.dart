@@ -22,55 +22,14 @@ enum RecordState {
   const RecordState(this.icon);
 }
 
-void openConfigFileIsolate(SendPort sendPort) async {
-  final selectedFile =
-      await FilePicker.platform.pickFiles(dialogTitle: 'open config');
-
-  if (selectedFile != null) {
-    final file = File(selectedFile.files.single.path!);
-    final contents = await file.readAsString();
-    sendPort.send(contents);
-  }
-}
-
 Future<void> saveFile(String text) async {
-  final completer = Completer<SendPort>();
-  final receivePort = ReceivePort();
-  receivePort.listen((message) {
-    if (message is SendPort) {
-      completer.complete(message);
-    }
-    receivePort.close();
-  });
-  await Isolate.spawn(saveFileIsolate, receivePort.sendPort);
-  SendPort sendPort = await completer.future;
-  sendPort.send(text);
-}
-
-Future<void> saveFileIsolate(SendPort sendPort) async {
-  String receivedData = "";
-  final receivePort = ReceivePort();
-  sendPort.send(receivePort.sendPort);
-
-  receivePort.listen((data) {
-    if (data is String) {
-      receivedData = data;
-    }
-  });
-
   final selectedFile =
-      await FilePicker.platform.saveFile(dialogTitle: 'save config');
-
-  while (receivedData.isEmpty) {
-    // yield to the listener
-    await Future.delayed(Duration.zero);
-  }
+  await FilePicker.platform.saveFile(dialogTitle: 'save config');
 
   if (selectedFile != null) {
     final file = File(selectedFile);
-    file.writeAsString(receivedData);
+    file.writeAsString(text);
   }
-  receivePort.close();
 }
 
 Future<void> createDataFileIsolate(SendPort sendPort) async {

@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:ffi';
 import 'package:ffi/ffi.dart' show malloc;
-import 'package:libusb/libusb32.dart';
 import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 import 'package:usb_host/misc/file_utilities.dart';
+import 'libusb32.dart';
 import 'usb_parse.dart';
 
 const _connectTimeout = 1000;
