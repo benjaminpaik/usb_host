@@ -187,7 +187,9 @@ class UsbModel extends ChangeNotifier {
         while (!_usb.watchdogTripped) {
           if ((UsbParse.getCommandMode(_usb) == UsbParse.writeParameters &&
               UsbParse.getData32(_usb, UsbParse.parameterTableIndex) ==
-                  transfer)) break;
+                  transfer)) {
+            break;
+          }
           await Future.delayed(const Duration(milliseconds: 1));
         }
       }

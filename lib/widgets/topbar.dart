@@ -122,7 +122,9 @@ class TopBar extends StatelessWidget {
     final programTargetMenuItem = MenuItemButton(
       onPressed: () {
         usbModel.initBootloader().then((_) {
-          displayMessage(context, usbModel.userMessage);
+          if(context.mounted) {
+            displayMessage(context, usbModel.userMessage);
+          }
           usbModel.usbConnect();
         });
       },
@@ -174,7 +176,9 @@ class TopBar extends StatelessWidget {
                 parameterTableModel.updateTable();
                 telemetryModel.startPlots();
               }
-              displayMessage(context, usbModel.userMessage);
+              if(context.mounted) {
+                displayMessage(context, usbModel.userMessage);
+              }
             });
           },
         ),

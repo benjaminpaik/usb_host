@@ -322,8 +322,9 @@ class _PlotPainter extends CustomPainter {
 }
 
 Color invert(Color color) {
-  final r = 255 - color.red;
-  final g = 255 - color.green;
-  final b = 255 - color.blue;
-  return Color.fromARGB((color.opacity * 255).round(), r, g, b);
+  return Color.from(
+      alpha: color.a,
+      red: 1.0 - color.r,
+      green: 1.0 - color.g,
+      blue: 1.0 - color.b);
 }

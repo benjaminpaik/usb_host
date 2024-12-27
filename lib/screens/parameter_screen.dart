@@ -51,7 +51,9 @@ class ParameterPage extends StatelessWidget {
                     if (success) {
                       parameterTableModel.updateTable();
                     }
-                    displayMessage(context, usbModel.userMessage);
+                    if(context.mounted) {
+                      displayMessage(context, usbModel.userMessage);
+                    }
                   });
                 },
               ),
@@ -60,7 +62,9 @@ class ParameterPage extends StatelessWidget {
                 child: const Text("send parameters"),
                 onPressed: () {
                   usbModel.sendParameters().then((_) {
-                    displayMessage(context, usbModel.userMessage);
+                    if(context.mounted) {
+                      displayMessage(context, usbModel.userMessage);
+                    }
                   });
                 },
               ),
@@ -69,7 +73,9 @@ class ParameterPage extends StatelessWidget {
                 child: const Text("flash parameters"),
                 onPressed: () {
                   usbModel.flashParameters().then((_) {
-                    displayMessage(context, usbModel.userMessage);
+                    if(context.mounted) {
+                      displayMessage(context, usbModel.userMessage);
+                    }
                   });
                 },
               ),

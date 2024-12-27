@@ -11,11 +11,11 @@ class UsbParse {
 
   static const interruptIn = 0x81;
   static const ctrlIn = libusb_endpoint_direction.LIBUSB_ENDPOINT_IN |
-  libusb_request_type.LIBUSB_REQUEST_TYPE_CLASS |
-  libusb_request_recipient.LIBUSB_RECIPIENT_INTERFACE;
+      libusb_request_type.LIBUSB_REQUEST_TYPE_CLASS |
+      libusb_request_recipient.LIBUSB_RECIPIENT_INTERFACE;
   static const ctrlOut = libusb_endpoint_direction.LIBUSB_ENDPOINT_OUT |
-  libusb_request_type.LIBUSB_REQUEST_TYPE_CLASS |
-  libusb_request_recipient.LIBUSB_RECIPIENT_INTERFACE;
+      libusb_request_type.LIBUSB_REQUEST_TYPE_CLASS |
+      libusb_request_recipient.LIBUSB_RECIPIENT_INTERFACE;
 
   static const hidGetReport = 0x01;
   static const hidGetIdle = 0x02;
@@ -76,6 +76,7 @@ class UsbParse {
     int offset = (2 * index) + dataStartIndex;
     byteData.setUint8(1, usb.rxBytes[offset + 1]);
     byteData.setUint8(0, usb.rxBytes[offset + 0]);
+
     return byteData.getInt32(0);
   }
 
