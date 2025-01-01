@@ -139,7 +139,7 @@ class _UsbProtocol {
   final Pointer<Uint8> _rxBuffer = malloc<Uint8>(UsbParse.maxRxBufferSize);
   final Pointer<Int32> _rxLength = malloc<Int32>(1);
 
-  Pointer<libusb_device_handle>? devHandle = nullptr;
+  Pointer<LibusbDeviceHandle>? devHandle = nullptr;
 
   _UsbProtocol() {
     UsbParse.crc16Generate();
@@ -150,21 +150,21 @@ class _UsbProtocol {
     _rxBuffer
         .asTypedList(UsbParse.maxRxBufferSize)
         .fillRange(0, UsbParse.maxRxBufferSize, 0);
-    if (libusb.libusb_init(nullptr) < 0) {
+    if (libusb.libusbInit(nullptr) < 0) {
       throw Exception("failed to load library");
     }
   }
 
   bool findDevice(int vid, int pid) {
-    final deviceListPtr = malloc<Pointer<Pointer<libusb_device>>>();
+    final deviceListPtr = malloc<Pointer<Pointer<LibusbDevice>>>();
     bool deviceFound = false;
-    if(libusb.libusb_get_device_list(nullptr, deviceListPtr) > 0) {
+    if(libusb.libusbGetDeviceList(nullptr, deviceListPtr) > 0) {
       final deviceList = deviceListPtr.value;
-      final descPtr = malloc<libusb_device_descriptor>();
+      final descPtr = malloc<LibusbDeviceDescriptor>();
       final path = malloc<Uint8>(8);
 
       for (int i = 0; deviceList[i] != nullptr; i++) {
-        final result = libusb.libusb_get_device_descriptor(deviceList[i], descPtr);
+        final result = libusb.libusbGetDeviceDescriptor(deviceList[i], descPtr);
         if(result >= 0) {
           if(vid == descPtr.ref.idVendor && pid == descPtr.ref.idProduct) {
             deviceFound = true;
@@ -173,7 +173,7 @@ class _UsbProtocol {
       }
       malloc.free(descPtr);
       malloc.free(path);
-      libusb.libusb_free_device_list(deviceList, 1);
+      libusb.libusbFreeDeviceList(deviceList, 1);
     }
     malloc.free(deviceListPtr);
     return deviceFound;
@@ -188,11 +188,11 @@ class _UsbProtocol {
   bool connect() {
     if(findDevice(UsbParse.vendorId, UsbParse.productId)) {
       int error = 0;
-      devHandle = libusb.libusb_open_device_with_vid_pid(
+      devHandle = libusb.libusbOpenDeviceWithVidPid(
           nullptr, UsbParse.vendorId, UsbParse.productId);
       if (devHandle != null) {
-        error = libusb.libusb_detach_kernel_driver(devHandle!, 0);
-        error = libusb.libusb_claim_interface(devHandle!, UsbParse.interface);
+        error = libusb.libusbDetachKernelDriver(devHandle!, 0);
+        error = libusb.libusbClaimInterface(devHandle!, UsbParse.interface);
         if (error < 0) {
           devHandle = nullptr;
           // final errorPointer = libusb.libusb_error_name(error);
@@ -205,8 +205,8 @@ class _UsbProtocol {
 
   void closePort() {
     if (devHandle != null) {
-      libusb.libusb_close(devHandle!);
-      libusb.libusb_exit(nullptr);
+      libusb.libusbClose(devHandle!);
+      libusb.libusbExit(nullptr);
     }
   }
 
@@ -214,7 +214,7 @@ class _UsbProtocol {
     int bytesSent = 0;
     _txBytes[UsbParse.timestampIndex]++;
     if (devHandle != null) {
-      bytesSent = libusb.libusb_control_transfer(
+      bytesSent = libusb.libusbControlTransfer(
           devHandle!,
           UsbParse.ctrlOut,
           UsbParse.hidSetReport,
@@ -230,7 +230,7 @@ class _UsbProtocol {
   bool _rxProtocol() {
     int result = -1;
     if (devHandle != null) {
-      result = libusb.libusb_interrupt_transfer(
+      result = libusb.libusbInterruptTransfer(
           devHandle!,
           UsbParse.interruptIn,
           _rxBuffer,

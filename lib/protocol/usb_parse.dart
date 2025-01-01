@@ -11,12 +11,12 @@ class UsbParse {
   static const maxRxBufferSize = 512;
 
   static const interruptIn = 0x81;
-  static const ctrlIn = libusb_endpoint_direction.LIBUSB_ENDPOINT_IN |
-      libusb_request_type.LIBUSB_REQUEST_TYPE_CLASS |
-      libusb_request_recipient.LIBUSB_RECIPIENT_INTERFACE;
-  static const ctrlOut = libusb_endpoint_direction.LIBUSB_ENDPOINT_OUT |
-      libusb_request_type.LIBUSB_REQUEST_TYPE_CLASS |
-      libusb_request_recipient.LIBUSB_RECIPIENT_INTERFACE;
+  static const ctrlIn = LibusbEndpointDirection.libusbEndpointIn |
+      LibusbRequestType.libusbRequestTypeClass |
+      LibusbRequestRecipient.libusbRecipientInterface;
+  static const ctrlOut = LibusbEndpointDirection.libusbEndpointOut |
+      LibusbRequestType.libusbRequestTypeClass |
+  LibusbRequestRecipient.libusbRecipientInterface;
 
   static const hidGetReport = 0x01;
   static const hidGetIdle = 0x02;
